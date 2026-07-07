@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Yume Player — Personal YouTube Player</title>
+<title>Yume Player — Operator Console</title>
 <style>
   :root{
     --accent:#80A1BA;
@@ -30,17 +30,14 @@
     overflow-x:hidden;
     position:relative;
   }
-  /* Background lives on ::before so the Blur Slider can genuinely blur it via filter */
   body::before{
     content:'';
     position:fixed; inset:-40px; z-index:-2;
     background:
       linear-gradient(180deg, #0b0d12cc, #0b0d12e6),
       url('https://images.unsplash.com/photo-1578632767115-351597cf2477?q=80&w=1974&auto=format&fit=crop') center/cover no-repeat;
-    filter: blur(var(--blur-amt));
-    transition: filter .2s ease;
+    filter: blur(14px);
   }
-  /* Replace background URL above with your own anime wallpaper */
 
   ::selection{ background:var(--accent); color:#0b0d12; }
   ::-webkit-scrollbar{ width:8px; }
@@ -75,6 +72,8 @@
     white-space:nowrap;
   }
   .logo .dot{ width:10px; height:10px; border-radius:50%; background:var(--success); box-shadow:0 0 8px var(--success); }
+  .logo .dot.live{ background:var(--accent); box-shadow:0 0 8px var(--accent); animation:pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse{ 0%,100%{ opacity:1;} 50%{ opacity:.4;} }
   .searchwrap{
     flex:1 1 auto; max-width:640px; margin:0 auto;
     position:relative; min-width:0;
@@ -98,8 +97,7 @@
     border:1px solid #91C4C333; background:#FFF7DD0d;
     white-space:nowrap; transition:.2s;
     cursor:pointer; pointer-events:auto;
-    position:relative; z-index:5;
-    flex-shrink:0;
+    position:relative; z-index:5; flex-shrink:0;
   }
   .api-status:hover{ background:#FFF7DD1a; }
   .api-status .led{ width:8px; height:8px; border-radius:50%; background:var(--danger); }
@@ -118,28 +116,21 @@
     .app{ grid-template-columns:1fr; }
   }
 
-  /* ===== LEFT: PLAYER ===== */
+  /* ===== LEFT: OPERATOR CONTROL COL (no local video player) ===== */
   .player-col{ display:flex; flex-direction:column; gap:16px; }
-  .player-shell{ padding:14px; }
-  .player-frame{
-    position:relative; width:100%; aspect-ratio:16/9;
-    border-radius:12px; overflow:hidden; background:#000;
-    border:1px solid #91C4C333;
+  .nowplaying{ padding:16px; display:flex; gap:16px; align-items:center; }
+  .nowplaying img{
+    width:150px; aspect-ratio:16/9; object-fit:cover; border-radius:12px; flex-shrink:0;
+    background:#1a1e26; border:1px solid #91C4C333;
   }
-  #ytplayer{ width:100%; height:100%; }
-  .player-empty{
-    position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
-    gap:10px; color:var(--text-dim); text-align:center; padding:20px;
-  }
-  .player-empty .big{ font-size:2.4rem; opacity:.6; }
-
-  .video-meta{ padding:14px 4px 4px; }
-  .video-meta h2{ font-size:1.15rem; font-weight:700; line-height:1.35; margin-bottom:6px; }
-  .video-meta .channel{ color:var(--text-dim); font-size:.88rem; }
+  .nowplaying .np-info{ flex:1; min-width:0; }
+  .nowplaying h2{ font-size:1.1rem; font-weight:700; line-height:1.35; margin-bottom:6px; }
+  .nowplaying .channel{ color:var(--text-dim); font-size:.85rem; }
+  .nowplaying .np-empty{ color:var(--text-dim); font-size:.9rem; }
 
   .controls-row{
     display:flex; align-items:center; gap:10px; flex-wrap:wrap;
-    padding:12px 4px 4px;
+    padding:14px;
   }
   .ctrl-btn{
     display:flex; align-items:center; gap:6px;
@@ -154,6 +145,14 @@
   .spacer{ flex:1; }
   .volume-row{ display:flex; align-items:center; gap:8px; color:var(--text-dim); font-size:.85rem; }
   .volume-row input[type=range]{ width:100px; accent-color:var(--accent); }
+
+  .typing-row{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:14px; }
+  .typing-row input[type=text]{
+    flex:1; min-width:180px; padding:10px 14px;
+    background:#FFF7DD12; border:1px solid var(--border); border-radius:10px;
+    color:var(--text); font-size:.88rem; outline:none; transition:.2s ease;
+  }
+  .typing-row input[type=text]:focus{ border-color:var(--accent); background:#FFF7DD1f; box-shadow:0 0 0 3px #80A1BA33; }
 
   .playlist-select{
     display:flex; align-items:center; gap:10px; flex-wrap:wrap;
@@ -171,6 +170,23 @@
     font-size:1rem; transition:.15s;
   }
   .icon-btn:hover{ background:var(--accent); color:#0b0d12; border-color:var(--accent); }
+
+  /* ===== PROJECTOR PANEL ===== */
+  .projector-panel{ padding:16px; display:flex; flex-direction:column; gap:12px; }
+  .projector-panel h3{ font-size:.95rem; font-weight:700; letter-spacing:.3px; }
+  .blur-row{ display:flex; align-items:center; gap:10px; }
+  .blur-row input[type=range]{ flex:1; accent-color:var(--accent); }
+  .blur-row .val{ font-size:.8rem; color:var(--text-dim); min-width:44px; text-align:right; }
+  .btn{ padding:9px 18px; border-radius:10px; font-size:.85rem; font-weight:600; }
+  .btn.primary{ background:var(--accent); color:#0b0d12; }
+  .btn.primary:hover{ background:var(--accent-dark); }
+  .btn.ghost{ background:transparent; color:var(--text-dim); border:1px solid #91C4C355; }
+  .btn.ghost:hover{ color:var(--text); border-color:var(--border); }
+  .btn.block{ width:100%; }
+  .hint{ font-size:.72rem; color:var(--text-dim); line-height:1.5; }
+  .proj-status{ display:flex; align-items:center; gap:8px; font-size:.8rem; color:var(--text-dim); }
+  .proj-status .led{ width:8px; height:8px; border-radius:50%; background:var(--danger); }
+  .proj-status.ok .led{ background:var(--success); box-shadow:0 0 6px var(--success); }
 
   /* ===== RIGHT: SIDEBAR ===== */
   .side-col{ display:flex; flex-direction:column; gap:16px; min-width:0; }
@@ -225,7 +241,7 @@
   .skel{ background:linear-gradient(90deg, #FFF7DD10 25%, #FFF7DD22 37%, #FFF7DD10 63%); background-size:400% 100%; animation:shimmer 1.4s ease infinite; border-radius:8px; }
   @keyframes shimmer{ 0%{background-position:100% 0;} 100%{background-position:0 0;} }
 
-  /* ===== MODAL (settings + new playlist) ===== */
+  /* ===== MODAL ===== */
   .modal-overlay{
     position:fixed; inset:0; background:#0b0d12b3; backdrop-filter:blur(4px);
     display:flex; align-items:center; justify-content:center; z-index:100; padding:20px;
@@ -239,11 +255,6 @@
   }
   .modal input:focus{ border-color:var(--accent); }
   .modal-actions{ display:flex; gap:10px; justify-content:flex-end; }
-  .btn{ padding:9px 18px; border-radius:10px; font-size:.85rem; font-weight:600; }
-  .btn.primary{ background:var(--accent); color:#0b0d12; }
-  .btn.primary:hover{ background:var(--accent-dark); }
-  .btn.ghost{ background:transparent; color:var(--text-dim); border:1px solid #91C4C355; }
-  .btn.ghost:hover{ color:var(--text); border-color:var(--border); }
 
   .toast-wrap{ position:fixed; bottom:20px; right:20px; z-index:200; display:flex; flex-direction:column; gap:8px; }
   .toast{
@@ -256,56 +267,12 @@
   .hidden{ display:none !important; }
 
   footer{ text-align:center; padding:18px; color:var(--text-dim); font-size:.75rem; }
-
-  /* ===== TYPING BOX (Operator) ===== */
-  .typing-row{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:12px 4px 4px; }
-  .typing-row input[type=text]{
-    flex:1; min-width:180px; padding:10px 14px;
-    background:#FFF7DD12; border:1px solid var(--border); border-radius:10px;
-    color:var(--text); font-size:.88rem; outline:none; transition:.2s ease;
-  }
-  .typing-row input[type=text]:focus{ border-color:var(--accent); background:#FFF7DD1f; box-shadow:0 0 0 3px #80A1BA33; }
-
-  /* ===== BLUR PANEL ===== */
-  .blur-row{ display:flex; align-items:center; gap:10px; }
-  .blur-row input[type=range]{ flex:1; accent-color:var(--accent); }
-  .blur-row .val{ font-size:.8rem; color:var(--text-dim); min-width:44px; text-align:right; }
-
-  /* ===== OVERLAY TEXT BOX (Projector pop-up) ===== */
-  .overlay-textbox{
-    position:absolute; left:50%; bottom:7%; transform:translateX(-50%);
-    max-width:82%; padding:18px 30px; border-radius:18px; z-index:30;
-    background: var(--overlay-orange);
-    border:1px solid var(--overlay-orange-border);
-    box-shadow:0 8px 30px #0006;
-    text-align:center;
-    animation:toastin .25s ease;
-  }
-  #overlayTextContent{
-    font-size:clamp(1.1rem, 2.6vw, 2rem); font-weight:700; line-height:1.4;
-    color:#fff; text-shadow:0 2px 10px #000c; word-break:break-word;
-  }
-
-  /* ===== DUAL-DISPLAY: PROJECTOR MODE ===== */
-  body.display-mode-active{ background:#000; }
-  body.display-mode-active::before{ inset:-60px; }
-  body.display-mode-active .operator-only{ display:none !important; }
-  body.display-mode-active .app{ display:block; padding:0; max-width:none; margin:0; }
-  body.display-mode-active .player-col{ gap:0; height:100vh; }
-  body.display-mode-active .player-shell{
-    height:100%; padding:0; border:none; border-radius:0;
-    background:transparent; backdrop-filter:none; -webkit-backdrop-filter:none;
-  }
-  body.display-mode-active .player-frame{
-    width:100vw; height:100vh; border-radius:0; border:none;
-  }
-  body.display-mode-active .player-empty{ display:none; }
 </style>
 </head>
 <body>
 
-<div class="topbar operator-only">
-  <div class="logo"><span class="dot"></span> Yume Player</div>
+<div class="topbar">
+  <div class="logo"><span class="dot" id="projLed"></span> Yume Player · Operator</div>
   <div class="searchwrap">
     <input id="searchInput" type="text" placeholder="Cari video di YouTube..." autocomplete="off">
     <span class="icon">🔍</span>
@@ -318,63 +285,58 @@
 
 <div class="app">
 
-  <!-- LEFT: PLAYER -->
+  <!-- LEFT: OPERATOR CONTROL -->
   <div class="player-col">
-    <div class="glass player-shell">
-      <div class="player-frame">
-        <div id="ytplayer"></div>
-        <div class="player-empty operator-only" id="playerEmpty">
-          <div class="big">🎬</div>
-          <div>Cari atau pilih video untuk mulai memutar</div>
-        </div>
-        <div class="overlay-textbox hidden" id="overlayTextBox">
-          <div id="overlayTextContent"></div>
-        </div>
-      </div>
-      <div class="video-meta operator-only">
-        <h2 id="nowTitle">Belum ada video dipilih</h2>
+    <div class="glass nowplaying">
+      <img id="nowThumb" src="" alt="" style="display:none;">
+      <div class="np-empty" id="nowEmpty">🎬 Belum ada video dipilih. Cari &amp; klik video untuk mulai memutar di Layar Proyektor.</div>
+      <div class="np-info hidden" id="nowInfo">
+        <h2 id="nowTitle">—</h2>
         <div class="channel" id="nowChannel">—</div>
-      </div>
-      <div class="controls-row operator-only">
-        <button class="ctrl-btn play-main" id="btnPlayPause">▶ Play</button>
-        <button class="ctrl-btn" id="btnPrev">⏮ Prev</button>
-        <button class="ctrl-btn" id="btnNext">Next ⏭</button>
-        <button class="ctrl-btn" id="btnShuffle" title="Shuffle">🔀 Shuffle</button>
-        <button class="ctrl-btn" id="btnLoop" title="Loop">🔁 Loop</button>
-        <div class="spacer"></div>
-        <div class="volume-row">
-          🔊 <input type="range" id="volumeSlider" min="0" max="100" value="80">
-        </div>
-      </div>
-      <div class="typing-row operator-only">
-        <input type="text" id="typingBox" placeholder="Ketik teks untuk Layar Proyektor... (Enter untuk kirim)" autocomplete="off">
-        <button class="ctrl-btn play-main" id="btnSendText">📢 Kirim</button>
-        <button class="ctrl-btn" id="btnHideText" title="Sembunyikan (T)">🙈 Sembunyikan</button>
       </div>
     </div>
 
-    <div class="glass playlist-select operator-only">
+    <div class="glass controls-row">
+      <button class="ctrl-btn play-main" id="btnPlayPause">▶ Play</button>
+      <button class="ctrl-btn" id="btnPrev">⏮ Prev</button>
+      <button class="ctrl-btn" id="btnNext">Next ⏭</button>
+      <button class="ctrl-btn" id="btnShuffle" title="Shuffle">🔀 Shuffle</button>
+      <button class="ctrl-btn" id="btnLoop" title="Loop">🔁 Loop</button>
+      <div class="spacer"></div>
+      <div class="volume-row">
+        🔊 <input type="range" id="volumeSlider" min="0" max="100" value="80">
+      </div>
+    </div>
+
+    <div class="glass typing-row">
+      <input type="text" id="typingBox" placeholder="Ketik teks untuk Layar Proyektor... (Enter untuk kirim)" autocomplete="off">
+      <button class="ctrl-btn play-main" id="btnSendText">📢 Kirim</button>
+      <button class="ctrl-btn" id="btnHideText" title="Sembunyikan (T)">🙈 Sembunyikan</button>
+    </div>
+
+    <div class="glass playlist-select">
       <select id="playlistSelect"></select>
       <button class="icon-btn" id="btnNewPlaylist" title="Buat playlist baru">＋</button>
       <button class="icon-btn" id="btnDeletePlaylist" title="Hapus playlist ini">🗑</button>
     </div>
 
-    <div class="glass panel operator-only">
+    <div class="glass projector-panel">
       <div class="panel-head">
-        <h3>🖥️ Layar Proyektor &amp; Tampilan</h3>
+        <h3>🖥️ Layar Proyektor</h3>
+        <div class="proj-status" id="projStatus"><span class="led"></span><span id="projStatusText">Belum terbuka</span></div>
       </div>
       <div class="blur-row">
         <span style="font-size:.85rem;color:var(--text-dim);">🌫️ Blur</span>
         <input type="range" id="blurSlider" min="0" max="40" value="14">
         <span class="val" id="blurValue">14px</span>
       </div>
-      <button class="btn primary" id="btnOpenDisplay">🖥️ Buka Layar Proyektor</button>
-      <p style="font-size:.72rem;color:var(--text-dim);">Hotkeys: <b>Enter</b> kirim teks · <b>T</b> sembunyikan teks · <b>P</b> play/pause · <b>I</b> panduan hotkeys</p>
+      <button class="btn primary block" id="btnOpenDisplay">🖥️ Buka Layar Proyektor</button>
+      <p class="hint">Layar Proyektor dibuat langsung di memori (tanpa server) via <code>window.open()</code>. Sinkronisasi satu arah dari Operator ke Proyektor. Hotkeys: <b>Enter</b> kirim teks · <b>T</b> sembunyikan teks · <b>P</b> play/pause · <b>I</b> panduan hotkeys.</p>
     </div>
   </div>
 
   <!-- RIGHT: SIDEBAR -->
-  <div class="side-col operator-only">
+  <div class="side-col">
     <div class="glass panel">
       <div class="tabs">
         <div class="tab active" data-tab="playlist">Antrean Playlist</div>
@@ -401,12 +363,38 @@
 
 </div>
 
-<footer class="operator-only">Yume Player — pemutar YouTube personal · dibuat untuk penggunaan pribadi</footer>
+<footer>Yume Player — pemutar YouTube personal · dibuat untuk penggunaan pribadi</footer>
 
-<div id="toastWrap" class="toast-wrap operator-only"></div>
+<div id="toastWrap" class="toast-wrap"></div>
+
+<!-- SETTINGS MODAL -->
+<div class="modal-overlay hidden" id="settingsModal">
+  <div class="glass modal">
+    <h3>⚙️ Pengaturan API Key</h3>
+    <p>Masukkan YouTube Data API v3 key kamu. Key hanya disimpan di memori untuk sesi ini (tidak pernah masuk ke LocalStorage) — kamu perlu memasukkannya lagi setiap kali halaman dibuka ulang.</p>
+    <input type="password" id="apiKeyInput" placeholder="AIzaSy...">
+    <p style="font-size:.72rem;">Belum punya key? Buat di <a href="https://console.cloud.google.com/apis/credentials" target="_blank" style="color:var(--accent); text-decoration:underline;">Google Cloud Console</a>, aktifkan "YouTube Data API v3".</p>
+    <div class="modal-actions">
+      <button class="btn ghost" id="btnCloseSettings">Tutup</button>
+      <button class="btn primary" id="btnSaveApiKey">Simpan Key</button>
+    </div>
+  </div>
+</div>
+
+<!-- NEW PLAYLIST MODAL -->
+<div class="modal-overlay hidden" id="newPlaylistModal">
+  <div class="glass modal">
+    <h3>Playlist Baru</h3>
+    <input type="text" id="newPlaylistInput" placeholder="Nama playlist (mis. Lagu Santai)">
+    <div class="modal-actions">
+      <button class="btn ghost" id="btnCancelNewPlaylist">Batal</button>
+      <button class="btn primary" id="btnConfirmNewPlaylist">Buat</button>
+    </div>
+  </div>
+</div>
 
 <!-- KEYBIND MODAL -->
-<div class="modal-overlay hidden operator-only" id="keybindModal">
+<div class="modal-overlay hidden" id="keybindModal">
   <div class="glass modal">
     <h3>⌨️ Petunjuk Hotkeys</h3>
     <p>
@@ -421,36 +409,14 @@
   </div>
 </div>
 
-<!-- SETTINGS MODAL -->
-<div class="modal-overlay hidden operator-only" id="settingsModal">
-  <div class="glass modal">
-    <h3>⚙️ Pengaturan API Key</h3>
-    <p>Masukkan YouTube Data API v3 key kamu. Key disimpan hanya di browser ini (LocalStorage) dan tidak pernah dikirim ke server lain selain Google.</p>
-    <input type="password" id="apiKeyInput" placeholder="AIzaSy...">
-    <p style="font-size:.72rem;">Belum punya key? Buat di <a href="https://console.cloud.google.com/apis/credentials" target="_blank" style="color:var(--accent); text-decoration:underline;">Google Cloud Console</a>, aktifkan "YouTube Data API v3".</p>
-    <div class="modal-actions">
-      <button class="btn ghost" id="btnCloseSettings">Tutup</button>
-      <button class="btn primary" id="btnSaveApiKey">Simpan Key</button>
-    </div>
-  </div>
-</div>
-
-<!-- NEW PLAYLIST MODAL -->
-<div class="modal-overlay hidden operator-only" id="newPlaylistModal">
-  <div class="glass modal">
-    <h3>Playlist Baru</h3>
-    <input type="text" id="newPlaylistInput" placeholder="Nama playlist (mis. Lagu Santai)">
-    <div class="modal-actions">
-      <button class="btn ghost" id="btnCancelNewPlaylist">Batal</button>
-      <button class="btn primary" id="btnConfirmNewPlaylist">Buat</button>
-    </div>
-  </div>
-</div>
-
 <script>
 /* =========================================================================
-   YUME PLAYER — Personal YouTube SPA
-   Vanilla JS, LocalStorage persistence, YouTube IFrame API + Data API v3
+   YUME PLAYER — OPERATOR CONSOLE
+   Vanilla JS, LocalStorage persistence, YouTube Data API v3 search.
+   The Operator window holds NO video player. It opens a Projector window
+   (window.open + document.write, single-file, no server) which owns the
+   real YT.Player instance. Sync is one-way: Operator -> Projector, via a
+   direct reference to window.YumeProjector on the popup (no BroadcastChannel).
    ========================================================================= */
 
 const STORAGE_KEYS = {
@@ -459,8 +425,7 @@ const STORAGE_KEYS = {
   ACTIVE_PLAYLIST: 'yume_active_playlist',
   PLAYER_STATE: 'yume_player_state', // { videoId, time, volume, loop, shuffle }
   SEARCH_CACHE: 'yume_search_cache'  // { [query]: { ts, items } }
-  // NOTE: API key is intentionally NOT in STORAGE_KEYS — it lives only in memory
-  // for the current session (security requirement: never persisted to localStorage).
+  // API key is intentionally NOT persisted — session-only, in-memory variable.
 };
 const SEARCH_CACHE_TTL = 1000 * 60 * 10; // 10 minutes
 const DEBOUNCE_MS = 550;
@@ -479,26 +444,6 @@ const Store = {
   }
 };
 
-/* ------------------------------ Dual-Display Mode -------------------------- */
-const urlParams = new URLSearchParams(window.location.search);
-const isDisplayMode = urlParams.get('mode') === 'display';
-if (isDisplayMode) {
-  document.body.classList.add('display-mode-active');
-}
-const bc = ('BroadcastChannel' in window) ? new BroadcastChannel('yume_channel') : null;
-
-/* ------------------------------ Blur Slider (persisted) -------------------- */
-function applyBlur(val) {
-  document.documentElement.style.setProperty('--blur-amt', val + 'px');
-  const label = document.getElementById('blurValue');
-  if (label) label.textContent = val + 'px';
-}
-let blurLevel = Store.get(BLUR_KEY, 14);
-applyBlur(blurLevel);
-window.addEventListener('storage', (e) => {
-  if (e.key === BLUR_KEY && e.newValue != null) applyBlur(parseInt(e.newValue, 10));
-});
-
 /* ------------------------------- Toasts ---------------------------------- */
 function toast(msg, isErr = false) {
   const wrap = document.getElementById('toastWrap');
@@ -509,27 +454,13 @@ function toast(msg, isErr = false) {
   setTimeout(() => el.remove(), 3200);
 }
 
-/* ------------------------------ Overlay Text (Projector pop-up) ----------- */
-function showOverlayText(text) {
-  const box = document.getElementById('overlayTextBox');
-  const content = document.getElementById('overlayTextContent');
-  if (!box || !content) return;
-  content.textContent = text;
-  box.classList.remove('hidden');
-}
-function hideOverlayText() {
-  const box = document.getElementById('overlayTextBox');
-  if (box) box.classList.add('hidden');
-}
-
 /* ------------------------------ App State --------------------------------- */
-// API key is session-only: plain in-memory variable, never read from/written to
-// localStorage. Every fresh load / new tab starts with an empty key.
-let apiKey = '';
+let apiKey = ''; // session-only, never persisted
 let playlists = Store.get(STORAGE_KEYS.PLAYLISTS, null);
 let videos = Store.get(STORAGE_KEYS.VIDEOS, {});
 let activePlaylistId = Store.get(STORAGE_KEYS.ACTIVE_PLAYLIST, null);
 let playerState = Store.get(STORAGE_KEYS.PLAYER_STATE, { videoId: null, time: 0, volume: 80, loop: false, shuffle: false });
+let blurLevel = Store.get(BLUR_KEY, 14);
 
 if (!playlists) {
   const defaultId = 'pl_' + Date.now();
@@ -543,17 +474,18 @@ if (!activePlaylistId || !playlists[activePlaylistId]) {
   Store.set(STORAGE_KEYS.ACTIVE_PLAYLIST, activePlaylistId);
 }
 
-let ytPlayer = null;
-let ytReady = false;
 let currentVideoId = playerState.videoId || null;
 let isPlaying = false;
 let searchResults = []; // array of videoIds currently shown from last search
+let projectorWin = null;
+
+document.getElementById('blurSlider').value = blurLevel;
+document.getElementById('blurValue').textContent = blurLevel + 'px';
 
 /* --------------------------- API status UI -------------------------------- */
 function refreshApiStatusUI() {
-  const led = document.getElementById('apiLed');
-  const text = document.getElementById('apiStatusText');
   const btn = document.getElementById('apiStatusBtn');
+  const text = document.getElementById('apiStatusText');
   if (apiKey) {
     btn.classList.add('ok');
     text.textContent = 'API Terhubung';
@@ -563,9 +495,22 @@ function refreshApiStatusUI() {
   }
 }
 
+/* --------------------------- Projector status UI --------------------------- */
+function refreshProjectorStatusUI() {
+  const el = document.getElementById('projStatus');
+  const text = document.getElementById('projStatusText');
+  const dot = document.getElementById('projLed');
+  const open = !!(projectorWin && !projectorWin.closed);
+  el.classList.toggle('ok', open);
+  text.textContent = open ? 'Terhubung' : 'Belum terbuka';
+  dot.classList.toggle('live', open);
+}
+setInterval(refreshProjectorStatusUI, 1500);
+
 /* ------------------------------ Modals ------------------------------------ */
 const settingsModal = document.getElementById('settingsModal');
 const newPlaylistModal = document.getElementById('newPlaylistModal');
+const keybindModal = document.getElementById('keybindModal');
 
 document.getElementById('apiStatusBtn').addEventListener('click', () => {
   document.getElementById('apiKeyInput').value = apiKey || '';
@@ -575,12 +520,16 @@ document.getElementById('btnCloseSettings').addEventListener('click', () => sett
 document.getElementById('btnSaveApiKey').addEventListener('click', () => {
   const val = document.getElementById('apiKeyInput').value.trim();
   if (!val) { toast('Masukkan API key terlebih dahulu', true); return; }
-  apiKey = val; // stored only in the in-memory variable — never persisted
+  apiKey = val; // in-memory only
   refreshApiStatusUI();
   settingsModal.classList.add('hidden');
   toast('API Key berhasil diterapkan untuk sesi ini');
 });
 settingsModal.addEventListener('click', (e) => { if (e.target === settingsModal) settingsModal.classList.add('hidden'); });
+
+function toggleKeybindModal() { keybindModal.classList.toggle('hidden'); }
+document.getElementById('btnCloseKeybind').addEventListener('click', () => keybindModal.classList.add('hidden'));
+keybindModal.addEventListener('click', (e) => { if (e.target === keybindModal) keybindModal.classList.add('hidden'); });
 
 document.getElementById('btnNewPlaylist').addEventListener('click', () => {
   document.getElementById('newPlaylistInput').value = '';
@@ -620,126 +569,6 @@ document.getElementById('btnDeletePlaylist').addEventListener('click', () => {
   toast('Playlist dihapus');
 });
 
-/* ------------------------------ Operator-only: Display, Blur, Typing ------- */
-if (!isDisplayMode) {
-  const btnOpenDisplay = document.getElementById('btnOpenDisplay');
-  if (btnOpenDisplay) {
-    btnOpenDisplay.addEventListener('click', () => {
-      window.open('index.html?mode=display', '_blank');
-    });
-  }
-
-  const blurSlider = document.getElementById('blurSlider');
-  if (blurSlider) {
-    blurSlider.value = blurLevel;
-    applyBlur(blurLevel);
-    blurSlider.addEventListener('input', (e) => {
-      blurLevel = parseInt(e.target.value, 10);
-      applyBlur(blurLevel);
-      Store.set(BLUR_KEY, blurLevel);
-      if (bc) bc.postMessage({ type: 'blur', payload: { value: blurLevel } });
-    });
-  }
-
-  const typingBox = document.getElementById('typingBox');
-  function sendTypedText() {
-    if (!typingBox) return;
-    const text = typingBox.value.trim();
-    if (!text) { toast('Ketik teks terlebih dahulu', true); return; }
-    if (bc) bc.postMessage({ type: 'text', payload: { text } });
-    showOverlayText(text); // local preview for operator
-    toast('Teks dikirim ke Layar Proyektor');
-  }
-  const btnSendText = document.getElementById('btnSendText');
-  if (btnSendText) btnSendText.addEventListener('click', sendTypedText);
-  if (typingBox) {
-    typingBox.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') { e.preventDefault(); sendTypedText(); }
-    });
-  }
-  const btnHideText = document.getElementById('btnHideText');
-  if (btnHideText) {
-    btnHideText.addEventListener('click', () => {
-      hideOverlayText();
-      if (bc) bc.postMessage({ type: 'hideText' });
-    });
-  }
-
-  const keybindModal = document.getElementById('keybindModal');
-  function toggleKeybindModal() { if (keybindModal) keybindModal.classList.toggle('hidden'); }
-  const btnCloseKeybind = document.getElementById('btnCloseKeybind');
-  if (btnCloseKeybind) btnCloseKeybind.addEventListener('click', () => keybindModal.classList.add('hidden'));
-  if (keybindModal) {
-    keybindModal.addEventListener('click', (e) => { if (e.target === keybindModal) keybindModal.classList.add('hidden'); });
-  }
-
-  /* ---------------------------- Global Hotkeys (Operator) ------------------ */
-  document.addEventListener('keydown', (e) => {
-    const tag = (e.target.tagName || '').toLowerCase();
-    const isTypingField = tag === 'input' || tag === 'textarea';
-    if (isTypingField) return; // Enter-in-typingBox already handled above
-    const key = e.key.toLowerCase();
-    if (key === 't') {
-      hideOverlayText();
-      if (bc) bc.postMessage({ type: 'hideText' });
-    } else if (key === 'p') {
-      e.preventDefault();
-      if (!ytPlayer || !currentVideoId) return;
-      if (isPlaying) { ytPlayer.pauseVideo(); if (bc) bc.postMessage({ type: 'pause' }); }
-      else { ytPlayer.playVideo(); if (bc) bc.postMessage({ type: 'play' }); }
-    } else if (key === 'i') {
-      toggleKeybindModal();
-    }
-  });
-} else {
-  /* ---------------------------- Global Hotkeys (Projector) ----------------- */
-  document.addEventListener('keydown', (e) => {
-    const key = e.key.toLowerCase();
-    if (key === 't') {
-      hideOverlayText();
-    } else if (key === 'p') {
-      e.preventDefault();
-      if (!ytPlayer || !currentVideoId) return;
-      if (isPlaying) ytPlayer.pauseVideo(); else ytPlayer.playVideo();
-    }
-  });
-
-  /* ---------------------------- BroadcastChannel listener (Projector) ------ */
-  if (bc) {
-    bc.onmessage = (e) => {
-      const { type, payload } = e.data || {};
-      switch (type) {
-        case 'loadVideo':
-          if (ytReady && ytPlayer && payload && payload.vid) {
-            loadVideoIntoPlayer(payload.vid, payload.time || 0, true);
-          }
-          break;
-        case 'play':
-          if (ytPlayer) ytPlayer.playVideo();
-          break;
-        case 'pause':
-          if (ytPlayer) ytPlayer.pauseVideo();
-          break;
-        case 'volume':
-          if (ytPlayer && payload) ytPlayer.setVolume(payload.volume);
-          break;
-        case 'seek':
-          if (ytPlayer && payload) ytPlayer.seekTo(payload.time, true);
-          break;
-        case 'text':
-          if (payload) showOverlayText(payload.text);
-          break;
-        case 'hideText':
-          hideOverlayText();
-          break;
-        case 'blur':
-          if (payload) { applyBlur(payload.value); Store.set(BLUR_KEY, payload.value); }
-          break;
-      }
-    };
-  }
-}
-
 /* ------------------------------ Tabs --------------------------------------- */
 document.querySelectorAll('.tab').forEach(tab => {
   tab.addEventListener('click', () => {
@@ -770,8 +599,6 @@ document.getElementById('playlistSelect').addEventListener('change', (e) => {
 });
 
 /* ------------------------------ Render lists -------------------------------- */
-function timeAgoSafe() { return ''; }
-
 function videoItemHTML(vid, { showPlaylistActions, showSearchActions, inPlaylistId }) {
   const v = videos[vid];
   if (!v) return '';
@@ -823,7 +650,6 @@ function renderSearchList() {
   list.innerHTML = searchResults.map(vid => videoItemHTML(vid, { showPlaylistActions: false, showSearchActions: true })).join('');
 }
 
-/* click delegation for list actions + play-on-click */
 document.getElementById('playlistList').addEventListener('click', handleListClick);
 document.getElementById('searchList').addEventListener('click', handleListClick);
 
@@ -882,7 +708,6 @@ async function runSearch(query) {
     settingsModal.classList.remove('hidden');
     return;
   }
-  // switch to search tab
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelector('.tab[data-tab="search"]').classList.add('active');
   document.getElementById('tab-playlist').classList.add('hidden');
@@ -935,95 +760,191 @@ function applySearchResults(items) {
   renderSearchList();
 }
 
-/* ------------------------------ YouTube IFrame Player ------------------------ */
-window.onYouTubeIframeAPIReady = function () {
-  ytReady = true;
-  ytPlayer = new YT.Player('ytplayer', {
-    host: 'https://www.youtube.com',
-    playerVars: { autoplay: 0, controls: 1, rel: 0, modestbranding: 1 },
-    events: {
-      onReady: onPlayerReady,
-      onStateChange: onPlayerStateChange
-    }
-  });
-};
+/* ------------------------- Projector bridge (one-way) ----------------------- */
+function buildProjectorHTML(initState) {
+  const stateJSON = JSON.stringify(initState).replace(/</g, '\\u003c');
+  return `<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Yume Player — Layar Proyektor</title>
+<style>
+  :root{ --blur-amt: ${initState.blur}px; --overlay-orange: rgba(242,143,41,0.25); --overlay-orange-border: rgba(242,143,41,0.55); }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;background:#000;overflow:hidden;}
+  body::before{
+    content:'';position:fixed;inset:-60px;z-index:-2;
+    background:linear-gradient(180deg,#0b0d12cc,#0b0d12e6), url('https://images.unsplash.com/photo-1578632767115-351597cf2477?q=80&w=1974&auto=format&fit=crop') center/cover no-repeat;
+    filter:blur(var(--blur-amt));transition:filter .2s ease;
+  }
+  #stage{position:fixed;inset:0;}
+  #ytplayer{width:100%;height:100%;}
+  .empty-hint{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;color:#FFF7DDb3;font-family:'Segoe UI',sans-serif;}
+  .empty-hint .big{font-size:3rem;opacity:.5;}
+  .overlay-textbox{position:absolute;left:50%;bottom:7%;transform:translateX(-50%);max-width:82%;padding:18px 30px;border-radius:18px;z-index:30;background:var(--overlay-orange);border:1px solid var(--overlay-orange-border);box-shadow:0 8px 30px #0006;text-align:center;font-family:'Segoe UI',sans-serif;}
+  .overlay-textbox.hidden{display:none;}
+  #overlayTextContent{font-size:clamp(1.1rem,2.6vw,2rem);font-weight:700;line-height:1.4;color:#fff;text-shadow:0 2px 10px #000c;word-break:break-word;}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="ytplayer"></div>
+  <div class="empty-hint" id="emptyHint"><div class="big">🎬</div><div>Menunggu video dari Operator…</div></div>
+  <div class="overlay-textbox hidden" id="overlayTextBox"><div id="overlayTextContent"></div></div>
+</div>
+<script>
+  var initState = ${stateJSON};
+  var ytPlayer = null, ytReady = false, cmdQueue = [];
 
-function loadYouTubeIframeAPI() {
-  const tag = document.createElement('script');
+  function applyBlur(v){ document.documentElement.style.setProperty('--blur-amt', v + 'px'); }
+  function showText(t){
+    var b = document.getElementById('overlayTextBox');
+    var c = document.getElementById('overlayTextContent');
+    c.textContent = t; b.classList.remove('hidden');
+  }
+  function hideText(){ document.getElementById('overlayTextBox').classList.add('hidden'); }
+  function runOrQueue(fn){ if (ytReady) fn(); else cmdQueue.push(fn); }
+
+  window.YumeProjector = {
+    loadVideo: function(vid, time){
+      runOrQueue(function(){
+        document.getElementById('emptyHint').classList.add('hidden');
+        ytPlayer.loadVideoById({ videoId: vid, startSeconds: time || 0 });
+      });
+    },
+    play: function(){ runOrQueue(function(){ ytPlayer.playVideo(); }); },
+    pause: function(){ runOrQueue(function(){ ytPlayer.pauseVideo(); }); },
+    setVolume: function(v){ runOrQueue(function(){ ytPlayer.setVolume(v); }); },
+    showText: showText,
+    hideText: hideText,
+    setBlur: applyBlur
+  };
+
+  window.onYouTubeIframeAPIReady = function () {
+    ytPlayer = new YT.Player('ytplayer', {
+      host: 'https://www.youtube.com',
+      playerVars: { autoplay: 1, controls: 0, rel: 0, modestbranding: 1 },
+      events: {
+        onReady: function () {
+          ytReady = true;
+          ytPlayer.setVolume(initState.volume != null ? initState.volume : 80);
+          if (initState.vid) {
+            document.getElementById('emptyHint').classList.add('hidden');
+            ytPlayer.loadVideoById({ videoId: initState.vid, startSeconds: initState.time || 0 });
+          }
+          cmdQueue.forEach(function (fn) { fn(); });
+          cmdQueue = [];
+        },
+        onStateChange: function (e) {
+          if (e.data === YT.PlayerState.ENDED) {
+            try {
+              if (window.opener && window.opener.YumeOperatorCallback) {
+                window.opener.YumeOperatorCallback.onEnded();
+              }
+            } catch (err) {}
+          }
+        }
+      }
+    });
+  };
+  var tag = document.createElement('script');
   tag.src = 'https://www.youtube.com/iframe_api';
   document.head.appendChild(tag);
-}
 
-function onPlayerReady() {
-  ytPlayer.setVolume(playerState.volume ?? 80);
-  document.getElementById('volumeSlider').value = playerState.volume ?? 80;
-  if (currentVideoId) {
-    loadVideoIntoPlayer(currentVideoId, playerState.time || 0, false);
-  }
-}
-
-function onPlayerStateChange(e) {
-  if (e.data === YT.PlayerState.PLAYING) {
-    isPlaying = true;
-    updatePlayPauseBtn();
-    startTimeTracker();
-  } else if (e.data === YT.PlayerState.PAUSED) {
-    isPlaying = false;
-    updatePlayPauseBtn();
-    stopTimeTracker();
-  } else if (e.data === YT.PlayerState.ENDED) {
-    isPlaying = false;
-    updatePlayPauseBtn();
-    stopTimeTracker();
-    handleVideoEnded();
-  }
-}
-
-let timeTrackerInterval = null;
-function startTimeTracker() {
-  stopTimeTracker();
-  timeTrackerInterval = setInterval(() => {
-    if (ytPlayer && ytPlayer.getCurrentTime) {
-      playerState.time = ytPlayer.getCurrentTime();
-      Store.set(STORAGE_KEYS.PLAYER_STATE, playerState);
+  document.addEventListener('keydown', function (e) {
+    var tagName = (e.target.tagName || '').toLowerCase();
+    if (tagName === 'input' || tagName === 'textarea') return;
+    var k = e.key.toLowerCase();
+    if (k === 't') {
+      hideText();
+    } else if (k === 'p') {
+      e.preventDefault();
+      if (ytPlayer) {
+        var st = ytPlayer.getPlayerState();
+        if (st === 1) ytPlayer.pauseVideo(); else ytPlayer.playVideo();
+      }
     }
-  }, 4000);
-}
-function stopTimeTracker() {
-  if (timeTrackerInterval) { clearInterval(timeTrackerInterval); timeTrackerInterval = null; }
+  });
+<\/script>
+</body>
+</html>`;
 }
 
-function handleVideoEnded() {
-  if (playerState.loop) {
-    ytPlayer.seekTo(0);
-    ytPlayer.playVideo();
+function openProjector() {
+  if (projectorWin && !projectorWin.closed) {
+    projectorWin.focus();
+    toast('Layar Proyektor sudah terbuka');
     return;
   }
-  playNext();
+  const initState = {
+    vid: currentVideoId,
+    time: playerState.time || 0,
+    volume: playerState.volume != null ? playerState.volume : 80,
+    blur: blurLevel
+  };
+  projectorWin = window.open('', 'yume_projector', 'width=1280,height=720,menubar=no,toolbar=no,location=no');
+  if (!projectorWin) {
+    toast('Popup diblokir browser. Izinkan popup untuk situs ini.', true);
+    return;
+  }
+  projectorWin.document.open();
+  projectorWin.document.write(buildProjectorHTML(initState));
+  projectorWin.document.close();
+  refreshProjectorStatusUI();
+  toast('Layar Proyektor dibuka');
+}
+document.getElementById('btnOpenDisplay').addEventListener('click', openProjector);
+
+function sendToProjector(action, payload) {
+  if (!projectorWin || projectorWin.closed) return false;
+  try {
+    const api = projectorWin.YumeProjector;
+    if (!api) return false;
+    if (action === 'loadVideo') api.loadVideo(payload.vid, payload.time);
+    else if (action === 'play') api.play();
+    else if (action === 'pause') api.pause();
+    else if (action === 'volume') api.setVolume(payload.volume);
+    else if (action === 'text') api.showText(payload.text);
+    else if (action === 'hideText') api.hideText();
+    else if (action === 'blur') api.setBlur(payload.value);
+    return true;
+  } catch (err) {
+    console.error('Perintah ke Proyektor gagal', err);
+    return false;
+  }
+}
+
+// One necessary exception to the strict one-way flow: the Projector calls this
+// back directly (via window.opener) purely to signal "video ended", so
+// Loop/Shuffle/Auto-Next keeps working. No BroadcastChannel is used.
+window.YumeOperatorCallback = {
+  onEnded: function () { handleVideoEnded(); }
+};
+
+/* ------------------------------ Playback logic ------------------------------ */
+function updatePlayPauseBtn() {
+  document.getElementById('btnPlayPause').textContent = isPlaying ? '⏸ Pause' : '▶ Play';
 }
 
 function loadVideoIntoPlayer(vid, startSeconds = 0, autoplay = true) {
-  if (!ytReady || !ytPlayer) return;
   currentVideoId = vid;
-  document.getElementById('playerEmpty').classList.add('hidden');
-  if (autoplay) {
-    ytPlayer.loadVideoById({ videoId: vid, startSeconds });
-  } else {
-    ytPlayer.cueVideoById({ videoId: vid, startSeconds });
-  }
   const v = videos[vid];
   if (v) {
+    document.getElementById('nowThumb').src = v.thumb;
+    document.getElementById('nowThumb').style.display = '';
+    document.getElementById('nowEmpty').classList.add('hidden');
+    document.getElementById('nowInfo').classList.remove('hidden');
     document.getElementById('nowTitle').textContent = v.title;
     document.getElementById('nowChannel').textContent = v.channel;
   }
   playerState.videoId = vid;
   playerState.time = startSeconds;
   Store.set(STORAGE_KEYS.PLAYER_STATE, playerState);
+  sendToProjector('loadVideo', { vid, time: startSeconds });
+  isPlaying = autoplay;
+  updatePlayPauseBtn();
   renderPlaylistList();
   renderSearchList();
-  if (!isDisplayMode && bc) {
-    bc.postMessage({ type: 'loadVideo', payload: { vid, time: startSeconds } });
-  }
 }
 
 function playVideo(vid) {
@@ -1031,20 +952,11 @@ function playVideo(vid) {
   loadVideoIntoPlayer(vid, 0, true);
 }
 
-function updatePlayPauseBtn() {
-  document.getElementById('btnPlayPause').textContent = isPlaying ? '⏸ Pause' : '▶ Play';
-}
-
 document.getElementById('btnPlayPause').addEventListener('click', () => {
-  if (!ytPlayer) return;
   if (!currentVideoId) { toast('Pilih video terlebih dahulu', true); return; }
-  if (isPlaying) {
-    ytPlayer.pauseVideo();
-    if (!isDisplayMode && bc) bc.postMessage({ type: 'pause' });
-  } else {
-    ytPlayer.playVideo();
-    if (!isDisplayMode && bc) bc.postMessage({ type: 'play' });
-  }
+  if (isPlaying) { sendToProjector('pause'); isPlaying = false; }
+  else { sendToProjector('play'); isPlaying = true; }
+  updatePlayPauseBtn();
 });
 
 function getActiveQueue() {
@@ -1089,28 +1001,81 @@ document.getElementById('volumeSlider').addEventListener('input', (e) => {
   const vol = parseInt(e.target.value, 10);
   playerState.volume = vol;
   Store.set(STORAGE_KEYS.PLAYER_STATE, playerState);
-  if (ytPlayer && ytPlayer.setVolume) ytPlayer.setVolume(vol);
-  if (!isDisplayMode && bc) bc.postMessage({ type: 'volume', payload: { volume: vol } });
+  sendToProjector('volume', { volume: vol });
 });
 
-/* ------------------------------ Cleanup (memory leak prevention) ------------- */
-window.addEventListener('beforeunload', () => {
-  stopTimeTracker();
-  if (ytPlayer && ytPlayer.destroy) {
-    try { ytPlayer.destroy(); } catch (e) {}
+function handleVideoEnded() {
+  if (playerState.loop) {
+    sendToProjector('loadVideo', { vid: currentVideoId, time: 0 });
+    sendToProjector('play');
+    isPlaying = true;
+    updatePlayPauseBtn();
+    return;
+  }
+  playNext();
+}
+
+/* ------------------------------ Typing Box (Overlay Text) ------------------- */
+const typingBox = document.getElementById('typingBox');
+function sendTypedText() {
+  const text = typingBox.value.trim();
+  if (!text) { toast('Ketik teks terlebih dahulu', true); return; }
+  sendToProjector('text', { text });
+  toast('Teks dikirim ke Layar Proyektor');
+}
+document.getElementById('btnSendText').addEventListener('click', sendTypedText);
+typingBox.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); sendTypedText(); }
+});
+document.getElementById('btnHideText').addEventListener('click', () => {
+  sendToProjector('hideText');
+});
+
+/* ------------------------------ Blur Slider ---------------------------------- */
+document.getElementById('blurSlider').addEventListener('input', (e) => {
+  blurLevel = parseInt(e.target.value, 10);
+  document.getElementById('blurValue').textContent = blurLevel + 'px';
+  Store.set(BLUR_KEY, blurLevel);
+  sendToProjector('blur', { value: blurLevel });
+});
+
+/* ------------------------------ Global Hotkeys ------------------------------- */
+document.addEventListener('keydown', (e) => {
+  const tag = (e.target.tagName || '').toLowerCase();
+  if (tag === 'input' || tag === 'textarea') return; // Enter-in-typingBox handled above
+  const key = e.key.toLowerCase();
+  if (key === 't') {
+    sendToProjector('hideText');
+  } else if (key === 'p') {
+    e.preventDefault();
+    if (!currentVideoId) return;
+    if (isPlaying) { sendToProjector('pause'); isPlaying = false; }
+    else { sendToProjector('play'); isPlaying = true; }
+    updatePlayPauseBtn();
+  } else if (key === 'i') {
+    toggleKeybindModal();
   }
 });
 
 /* ------------------------------ Init ----------------------------------------- */
 function init() {
   refreshApiStatusUI();
+  refreshProjectorStatusUI();
   document.getElementById('btnShuffle').classList.toggle('active', !!playerState.shuffle);
   document.getElementById('btnLoop').classList.toggle('active', !!playerState.loop);
   renderPlaylistSelect();
   renderPlaylistList();
   renderSearchList();
-  loadYouTubeIframeAPI();
-  if (!apiKey && !isDisplayMode) {
+  if (currentVideoId && videos[currentVideoId]) {
+    const v = videos[currentVideoId];
+    document.getElementById('nowThumb').src = v.thumb;
+    document.getElementById('nowThumb').style.display = '';
+    document.getElementById('nowEmpty').classList.add('hidden');
+    document.getElementById('nowInfo').classList.remove('hidden');
+    document.getElementById('nowTitle').textContent = v.title;
+    document.getElementById('nowChannel').textContent = v.channel;
+  }
+  if (!apiKey) {
     setTimeout(() => { settingsModal.classList.remove('hidden'); }, 400);
   }
 }

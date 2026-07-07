@@ -769,7 +769,7 @@ function buildProjectorHTML(initState) {
 <meta charset="UTF-8">
 <title>Yume Player — Layar Proyektor</title>
 <style>
-  :root{ --blur-amt: ${initState.blur}px; --overlay-orange: rgba(242,143,41,0.25); --overlay-orange-border: rgba(242,143,41,0.55); }
+  :root{ --blur-amt: ${initState.blur}px; }
   *{margin:0;padding:0;box-sizing:border-box;}
   html,body{height:100%;background:#000;overflow:hidden;}
   body::before{
@@ -781,15 +781,24 @@ function buildProjectorHTML(initState) {
   #ytplayer{width:100%;height:100%;}
   .empty-hint{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;color:#FFF7DDb3;font-family:'Segoe UI',sans-serif;}
   .empty-hint .big{font-size:3rem;opacity:.5;}
-  .overlay-textbox{position:absolute;left:50%;bottom:7%;transform:translateX(-50%);max-width:82%;padding:18px 30px;border-radius:18px;z-index:30;background:var(--overlay-orange);border:1px solid var(--overlay-orange-border);box-shadow:0 8px 30px #0006;text-align:center;font-family:'Segoe UI',sans-serif;}
+  .overlay-textbox{
+    position:absolute; left:50%; bottom:7%; transform:translateX(-50%);
+    max-width:82%; padding:20px 34px; border-radius:20px; z-index:30;
+    background: rgba(18,20,26,0.72);
+    backdrop-filter: blur(18px) saturate(160%);
+    -webkit-backdrop-filter: blur(18px) saturate(160%);
+    border:1px solid rgba(255,255,255,0.22);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.12);
+    text-align:center; font-family:'Segoe UI',sans-serif;
+  }
   .overlay-textbox.hidden{display:none;}
-  #overlayTextContent{font-size:clamp(1.1rem,2.6vw,2rem);font-weight:700;line-height:1.4;color:#fff;text-shadow:0 2px 10px #000c;word-break:break-word;}
+  #overlayTextContent{font-size:clamp(1.1rem,2.6vw,2rem);font-weight:700;line-height:1.4;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.9), 0 2px 12px rgba(0,0,0,0.7);word-break:break-word;letter-spacing:.2px;}
 </style>
 </head>
 <body>
 <div id="stage">
   <div id="ytplayer"></div>
-  <div class="empty-hint" id="emptyHint"><div class="big">🎬</div><div>Menunggu video dari Operator…</div></div>
+  <div class="empty-hint" id="emptyHint"><div class="big">🎬</div></div>
   <div class="overlay-textbox hidden" id="overlayTextBox"><div id="overlayTextContent"></div></div>
 </div>
 <script>

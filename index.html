@@ -76,8 +76,8 @@
   }
   .logo .dot{ width:10px; height:10px; border-radius:50%; background:var(--success); box-shadow:0 0 8px var(--success); }
   .searchwrap{
-    flex:1; max-width:640px; margin:0 auto;
-    position:relative;
+    flex:1 1 auto; max-width:640px; margin:0 auto;
+    position:relative; min-width:0;
   }
   .searchwrap input{
     width:100%; padding:11px 44px 11px 16px;
@@ -97,6 +97,9 @@
     padding:8px 14px; border-radius:999px;
     border:1px solid #91C4C333; background:#FFF7DD0d;
     white-space:nowrap; transition:.2s;
+    cursor:pointer; pointer-events:auto;
+    position:relative; z-index:5;
+    flex-shrink:0;
   }
   .api-status:hover{ background:#FFF7DD1a; }
   .api-status .led{ width:8px; height:8px; border-radius:50%; background:var(--danger); }
@@ -451,16 +454,30 @@
    ========================================================================= */
 
 const STORAGE_KEYS = {
-  API_KEY: 'yume_api_key',
   PLAYLISTS: 'yume_playlists',       // { [playlistId]: { id, name, videoIds: [] } }
   VIDEOS: 'yume_videos',             // { [videoId]: { id, title, channel, thumb } }
   ACTIVE_PLAYLIST: 'yume_active_playlist',
   PLAYER_STATE: 'yume_player_state', // { videoId, time, volume, loop, shuffle }
   SEARCH_CACHE: 'yume_search_cache'  // { [query]: { ts, items } }
+  // NOTE: API key is intentionally NOT in STORAGE_KEYS — it lives only in memory
+  // for the current session (security requirement: never persisted to localStorage).
 };
 const SEARCH_CACHE_TTL = 1000 * 60 * 10; // 10 minutes
 const DEBOUNCE_MS = 550;
 const BLUR_KEY = 'yume_blur_level';
+
+/* ---------------------------- Storage helpers ---------------------------- */
+const Store = {
+  get(key, fallback) {
+    try {
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : fallback;
+    } catch { return fallback; }
+  },
+  set(key, value) {
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) { console.error('Storage full or blocked', e); }
+  }
+};
 
 /* ------------------------------ Dual-Display Mode -------------------------- */
 const urlParams = new URLSearchParams(window.location.search);
@@ -481,19 +498,6 @@ applyBlur(blurLevel);
 window.addEventListener('storage', (e) => {
   if (e.key === BLUR_KEY && e.newValue != null) applyBlur(parseInt(e.newValue, 10));
 });
-
-/* ---------------------------- Storage helpers ---------------------------- */
-const Store = {
-  get(key, fallback) {
-    try {
-      const raw = localStorage.getItem(key);
-      return raw ? JSON.parse(raw) : fallback;
-    } catch { return fallback; }
-  },
-  set(key, value) {
-    try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) { console.error('Storage full or blocked', e); }
-  }
-};
 
 /* ------------------------------- Toasts ---------------------------------- */
 function toast(msg, isErr = false) {
@@ -519,7 +523,9 @@ function hideOverlayText() {
 }
 
 /* ------------------------------ App State --------------------------------- */
-let apiKey = Store.get(STORAGE_KEYS.API_KEY, '');
+// API key is session-only: plain in-memory variable, never read from/written to
+// localStorage. Every fresh load / new tab starts with an empty key.
+let apiKey = '';
 let playlists = Store.get(STORAGE_KEYS.PLAYLISTS, null);
 let videos = Store.get(STORAGE_KEYS.VIDEOS, {});
 let activePlaylistId = Store.get(STORAGE_KEYS.ACTIVE_PLAYLIST, null);
@@ -569,11 +575,10 @@ document.getElementById('btnCloseSettings').addEventListener('click', () => sett
 document.getElementById('btnSaveApiKey').addEventListener('click', () => {
   const val = document.getElementById('apiKeyInput').value.trim();
   if (!val) { toast('Masukkan API key terlebih dahulu', true); return; }
-  apiKey = val;
-  Store.set(STORAGE_KEYS.API_KEY, apiKey);
+  apiKey = val; // stored only in the in-memory variable — never persisted
   refreshApiStatusUI();
   settingsModal.classList.add('hidden');
-  toast('API key tersimpan');
+  toast('API Key berhasil diterapkan untuk sesi ini');
 });
 settingsModal.addEventListener('click', (e) => { if (e.target === settingsModal) settingsModal.classList.add('hidden'); });
 

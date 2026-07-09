@@ -271,7 +271,7 @@
 <div class="topbar">
   <div class="logo"><span class="dot" id="projLed"></span> Yume Player · Operator</div>
   <div class="searchwrap">
-    <input id="searchInput" type="text" placeholder="Cari video di YouTube..." autocomplete="off">
+    <input id="searchInput" type="text" placeholder="Cari musik, video musik, atau lirik..." autocomplete="off">
     <span class="icon">🔍</span>
   </div>
   <button class="api-status" id="apiStatusBtn" title="Klik untuk atur API Key">
@@ -318,17 +318,16 @@
       <button class="icon-btn" id="btnDeletePlaylist" title="Hapus playlist ini">🗑</button>
     </div>
 
-    <div class="glass projector-panel">
+    <div class="glass panel">
       <div class="panel-head">
-        <h3>🖥️ Layar Proyektor</h3>
-        <div class="proj-status" id="projStatus"><span class="led"></span><span id="projStatusText">Belum terbuka</span></div>
+        <h3>🔎 Hasil Pencarian</h3>
+        <span class="count" id="searchCount">0</span>
       </div>
-      <button class="btn primary block" id="btnOpenDisplay">🖥️ Buka Layar Proyektor</button>
-      <p class="hint">Menekan <b>Play</b> otomatis membuka Layar Proyektor dalam mode layar penuh jika belum aktif. Sinkronisasi satu arah Operator → Proyektor via <code>window.open()</code>, tanpa server. Tekan <b>I</b> untuk panduan hotkeys lengkap.</p>
+      <div class="list" id="searchList"></div>
     </div>
   </div>
 
-  <!-- RIGHT: SIDEBAR — Playlist & Pencarian tampil bersamaan, tanpa tab -->
+  <!-- RIGHT: SIDEBAR — Playlist & tombol Layar Proyektor -->
   <div class="side-col">
     <div class="glass panel">
       <div class="panel-head">
@@ -338,12 +337,13 @@
       <div class="list" id="playlistList"></div>
     </div>
 
-    <div class="glass panel">
+    <div class="glass projector-panel">
       <div class="panel-head">
-        <h3>🔎 Hasil Pencarian</h3>
-        <span class="count" id="searchCount">0</span>
+        <h3>🖥️ Layar Proyektor</h3>
+        <div class="proj-status" id="projStatus"><span class="led"></span><span id="projStatusText">Belum terbuka</span></div>
       </div>
-      <div class="list" id="searchList"></div>
+      <button class="btn primary block" id="btnOpenDisplay">🖥️ Buka Layar Proyektor</button>
+      <p class="hint">Menekan <b>Play</b> otomatis membuka Layar Proyektor dalam mode layar penuh jika belum aktif. Sinkronisasi satu arah Operator → Proyektor via <code>window.open()</code>, tanpa server. Tekan <b>I</b> untuk panduan hotkeys lengkap.</p>
     </div>
   </div>
 
@@ -692,21 +692,39 @@ async function runSearch(query) {
     return;
   }
 
-  document.getElementById('searchList').innerHTML = skeletonHTML(5);
+  document.getElementById('searchList').innerHTML = skeletonHTML(6);
 
   try {
-    const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=15&q=${encodeURIComponent(query)}&key=${apiKey}`;
-    const res = await fetch(url);
-    const data = await res.json();
-    if (!res.ok) {
-      throw new Error(data?.error?.message || 'Gagal mengambil hasil pencarian');
+    // Focus on Music (videoCategoryId=10) and exclude YouTube Shorts by only
+    // fetching "medium" (4–20 min) and "long" (20 min+) durations — Shorts are
+    // always well under 4 minutes, so the API's "short" bucket is skipped entirely.
+    const musicQuery = `${query} official music video`;
+    const durations = ['medium', 'long'];
+    const requests = durations.map(dur => {
+      const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&videoCategoryId=10&videoDuration=${dur}&maxResults=25&q=${encodeURIComponent(musicQuery)}&key=${apiKey}`;
+      return fetch(url).then(res => res.json().then(data => ({ res, data })));
+    });
+    const results = await Promise.all(requests);
+
+    const seen = new Set();
+    const items = [];
+    for (const { res, data } of results) {
+      if (!res.ok) {
+        throw new Error(data?.error?.message || 'Gagal mengambil hasil pencarian');
+      }
+      (data.items || []).forEach(it => {
+        const id = it.id.videoId;
+        if (!id || seen.has(id)) return;
+        seen.add(id);
+        items.push({
+          id,
+          title: it.snippet.title,
+          channel: it.snippet.channelTitle,
+          thumb: it.snippet.thumbnails?.medium?.url || it.snippet.thumbnails?.default?.url || ''
+        });
+      });
     }
-    const items = (data.items || []).map(it => ({
-      id: it.id.videoId,
-      title: it.snippet.title,
-      channel: it.snippet.channelTitle,
-      thumb: it.snippet.thumbnails?.medium?.url || it.snippet.thumbnails?.default?.url || ''
-    }));
+
     cache[query] = { ts: Date.now(), items };
     Store.set(STORAGE_KEYS.SEARCH_CACHE, cache);
     applySearchResults(items);
@@ -755,8 +773,10 @@ function buildProjectorHTML(initState) {
   .empty-hint .big{font-size:3rem;opacity:.5;}
 
   .overlay-textbox{
-    position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
-    width:82%; max-width:1100px; padding:48px 56px; border-radius:22px; z-index:30;
+    position:absolute; top:50%; left:50%;
+    width:82%; max-width:1100px;
+    height:36vh; min-height:240px; max-height:440px;
+    padding:40px 56px; border-radius:22px; z-index:30;
     background: rgba(30,32,38,0.46);
     backdrop-filter: blur(14px) saturate(140%);
     -webkit-backdrop-filter: blur(14px) saturate(140%);
@@ -764,14 +784,29 @@ function buildProjectorHTML(initState) {
     box-shadow: 0 20px 60px rgba(0,0,0,0.4);
     text-align:center; font-family:'Segoe UI',sans-serif;
     display:flex; align-items:center; justify-content:center;
+    overflow:hidden;
+    transform:translate(-50%,-50%) scale(.85);
+    opacity:0;
   }
   .overlay-textbox.hidden{display:none;}
+  .overlay-textbox.show{ animation: overlayIn .38s cubic-bezier(.16,1,.3,1) forwards; }
+  .overlay-textbox.hide{ animation: overlayOut .28s ease forwards; }
+  @keyframes overlayIn{
+    from{ opacity:0; transform:translate(-50%,-50%) scale(.85); }
+    to{ opacity:1; transform:translate(-50%,-50%) scale(1); }
+  }
+  @keyframes overlayOut{
+    from{ opacity:1; transform:translate(-50%,-50%) scale(1); }
+    to{ opacity:0; transform:translate(-50%,-50%) scale(.85); }
+  }
   #overlayTextContent{
     font-family: Georgia, 'Times New Roman', 'Noto Serif', serif;
-    font-size:clamp(1.6rem,4.2vw,3.4rem); font-weight:700; line-height:1.35;
+    font-weight:700; line-height:1.35;
     color:#FFF7DD;
     text-shadow:0 2px 6px rgba(0,0,0,0.85), 0 4px 22px rgba(0,0,0,0.6);
     word-break:break-word; letter-spacing:.5px;
+    max-height:100%; overflow:hidden;
+    transition: font-size .15s ease;
   }
 </style>
 </head>
@@ -786,13 +821,43 @@ function buildProjectorHTML(initState) {
 <script>
   var initState = ${stateJSON};
   var ytPlayer = null, ytReady = false, cmdQueue = [];
+  var hideTimer = null;
+
+  // The box itself never changes size — only the font shrinks as text grows,
+  // so the frame always stays flat/consistent regardless of how much is typed.
+  function fontSizeForLength(len){
+    if (len <= 18) return 58;
+    if (len <= 32) return 48;
+    if (len <= 50) return 40;
+    if (len <= 75) return 32;
+    if (len <= 110) return 26;
+    if (len <= 160) return 21;
+    if (len <= 220) return 17;
+    return 14;
+  }
 
   function showText(t){
     var b = document.getElementById('overlayTextBox');
     var c = document.getElementById('overlayTextContent');
-    c.textContent = t; b.classList.remove('hidden');
+    clearTimeout(hideTimer);
+    c.textContent = t;
+    c.style.fontSize = fontSizeForLength(t.length) + 'px';
+    b.classList.remove('hidden');
+    b.classList.remove('hide');
+    void b.offsetWidth; // restart animation even if a box is already showing
+    b.classList.add('show');
   }
-  function hideText(){ document.getElementById('overlayTextBox').classList.add('hidden'); }
+  function hideText(){
+    var b = document.getElementById('overlayTextBox');
+    if (b.classList.contains('hidden')) return;
+    b.classList.remove('show');
+    b.classList.add('hide');
+    clearTimeout(hideTimer);
+    hideTimer = setTimeout(function(){
+      b.classList.add('hidden');
+      b.classList.remove('hide');
+    }, 300);
+  }
   function runOrQueue(fn){ if (ytReady) fn(); else cmdQueue.push(fn); }
 
   window.YumeProjector = {

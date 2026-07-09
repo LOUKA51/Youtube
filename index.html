@@ -774,9 +774,9 @@ function buildProjectorHTML(initState) {
 
   .overlay-textbox{
     position:absolute; top:50%; left:50%;
-    width:94%; max-width:1900px;
-    height:56vh; min-height:380px; max-height:760px;
-    padding:72px 96px; border-radius:34px; z-index:30;
+    width:97%; max-width:2300px;
+    height:70vh; min-height:480px; max-height:920px;
+    padding:88px 120px; border-radius:38px; z-index:30;
     background:
       radial-gradient(120% 160% at 50% 0%, rgba(255,255,255,0.10), rgba(255,255,255,0) 55%),
       linear-gradient(150deg, rgba(38,34,48,0.62), rgba(16,16,22,0.6));
@@ -834,16 +834,17 @@ function buildProjectorHTML(initState) {
   var hideTimer = null;
 
   // The box itself never changes size — only the font shrinks as text grows,
-  // scaled ~2x larger overall vs the previous default.
+  // now scaled noticeably larger across every tier, including long text.
   function fontSizeForLength(len){
-    if (len <= 18) return 104;
-    if (len <= 32) return 88;
-    if (len <= 50) return 72;
-    if (len <= 75) return 58;
-    if (len <= 110) return 46;
-    if (len <= 160) return 36;
-    if (len <= 220) return 28;
-    return 22;
+    if (len <= 18) return 140;
+    if (len <= 32) return 120;
+    if (len <= 50) return 102;
+    if (len <= 75) return 86;
+    if (len <= 110) return 70;
+    if (len <= 160) return 58;
+    if (len <= 220) return 48;
+    if (len <= 300) return 40;
+    return 34;
   }
 
   function showText(t){

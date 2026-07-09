@@ -767,48 +767,58 @@ function buildProjectorHTML(initState) {
     background:linear-gradient(180deg,#0b0d12d9,#0b0d12ee), url('https://raw.githubusercontent.com/LOUKA51/Youtube/refs/heads/main/1366762.webp') center/cover no-repeat;
     filter:blur(var(--blur-amt));
   }
-  #stage{position:fixed;inset:0;}
+  #stage{position:fixed;inset:0; background:#000; overflow:hidden;}
   #ytplayer{width:100%;height:100%;}
   .empty-hint{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;color:#FFF7DDb3;font-family:'Segoe UI',sans-serif;}
   .empty-hint .big{font-size:3rem;opacity:.5;}
 
   .overlay-textbox{
     position:absolute; top:50%; left:50%;
-    width:82%; max-width:1100px;
-    height:36vh; min-height:240px; max-height:440px;
-    padding:40px 56px; border-radius:22px; z-index:30;
-    background: rgba(30,32,38,0.46);
-    backdrop-filter: blur(14px) saturate(140%);
-    -webkit-backdrop-filter: blur(14px) saturate(140%);
-    border: 1px solid rgba(255,255,255,0.14);
-    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    width:94%; max-width:1900px;
+    height:56vh; min-height:380px; max-height:760px;
+    padding:72px 96px; border-radius:34px; z-index:30;
+    background:
+      radial-gradient(120% 160% at 50% 0%, rgba(255,255,255,0.10), rgba(255,255,255,0) 55%),
+      linear-gradient(150deg, rgba(38,34,48,0.62), rgba(16,16,22,0.6));
+    backdrop-filter: blur(22px) saturate(170%);
+    -webkit-backdrop-filter: blur(22px) saturate(170%);
+    border: 1px solid rgba(255,255,255,0.20);
+    box-shadow: 0 30px 90px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.14);
     text-align:center; font-family:'Segoe UI',sans-serif;
     display:flex; align-items:center; justify-content:center;
     overflow:hidden;
-    transform:translate(-50%,-50%) scale(.85);
+    transform:translate(-50%,-46%) scale(.8);
+    filter: blur(6px);
     opacity:0;
+    will-change: transform, opacity, filter;
   }
   .overlay-textbox.hidden{display:none;}
-  .overlay-textbox.show{ animation: overlayIn .38s cubic-bezier(.16,1,.3,1) forwards; }
-  .overlay-textbox.hide{ animation: overlayOut .28s ease forwards; }
+  .overlay-textbox.show{ animation: overlayIn .62s cubic-bezier(.19,1,.22,1) forwards; }
+  .overlay-textbox.hide{ animation: overlayOut .4s cubic-bezier(.4,0,1,1) forwards; }
   @keyframes overlayIn{
-    from{ opacity:0; transform:translate(-50%,-50%) scale(.85); }
-    to{ opacity:1; transform:translate(-50%,-50%) scale(1); }
+    0%{ opacity:0; transform:translate(-50%,-46%) scale(.8); filter:blur(10px); }
+    60%{ opacity:1; filter:blur(0); }
+    100%{ opacity:1; transform:translate(-50%,-50%) scale(1); filter:blur(0); }
   }
   @keyframes overlayOut{
-    from{ opacity:1; transform:translate(-50%,-50%) scale(1); }
-    to{ opacity:0; transform:translate(-50%,-50%) scale(.85); }
+    0%{ opacity:1; transform:translate(-50%,-50%) scale(1); filter:blur(0); }
+    100%{ opacity:0; transform:translate(-50%,-47%) scale(.88); filter:blur(8px); }
   }
   #overlayTextContent{
-    font-family: Georgia, 'Times New Roman', 'Noto Serif', serif;
-    font-weight:700; line-height:1.35;
-    color:#FFF7DD;
-    text-shadow:0 2px 6px rgba(0,0,0,0.85), 0 4px 22px rgba(0,0,0,0.6);
+    font-family: 'Poppins', 'Segoe UI', system-ui, sans-serif;
+    font-weight:800; line-height:1.3;
+    background: linear-gradient(180deg, #FFFDF8 0%, #FFE9C2 55%, #FFCB80 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    text-shadow:0 3px 10px rgba(0,0,0,0.55);
+    filter: drop-shadow(0 4px 18px rgba(0,0,0,0.65)) drop-shadow(0 0 32px rgba(255,190,110,0.35));
     word-break:break-word; letter-spacing:.5px;
     max-height:100%; overflow:hidden;
-    transition: font-size .15s ease;
+    transition: font-size .18s ease;
   }
 </style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800;900&display=swap" rel="stylesheet">
 </head>
 <body>
 <div id="stage">
@@ -824,16 +834,16 @@ function buildProjectorHTML(initState) {
   var hideTimer = null;
 
   // The box itself never changes size — only the font shrinks as text grows,
-  // so the frame always stays flat/consistent regardless of how much is typed.
+  // scaled ~2x larger overall vs the previous default.
   function fontSizeForLength(len){
-    if (len <= 18) return 58;
-    if (len <= 32) return 48;
-    if (len <= 50) return 40;
-    if (len <= 75) return 32;
-    if (len <= 110) return 26;
-    if (len <= 160) return 21;
-    if (len <= 220) return 17;
-    return 14;
+    if (len <= 18) return 104;
+    if (len <= 32) return 88;
+    if (len <= 50) return 72;
+    if (len <= 75) return 58;
+    if (len <= 110) return 46;
+    if (len <= 160) return 36;
+    if (len <= 220) return 28;
+    return 22;
   }
 
   function showText(t){
@@ -842,23 +852,58 @@ function buildProjectorHTML(initState) {
     clearTimeout(hideTimer);
     c.textContent = t;
     c.style.fontSize = fontSizeForLength(t.length) + 'px';
-    b.classList.remove('hidden');
     b.classList.remove('hide');
-    void b.offsetWidth; // restart animation even if a box is already showing
-    b.classList.add('show');
+    b.classList.remove('show');
+    b.classList.remove('hidden');
+    // Double-rAF: guarantees the browser has painted the "visible, pre-animation"
+    // state on its own frame before the animation class is applied. Without this,
+    // some browsers (reliably reproducible on first load / certain GPU pipelines,
+    // e.g. many real-world static hosts) silently skip the very first animation
+    // and only start animating correctly from the second trigger onward.
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        b.classList.add('show');
+      });
+    });
   }
   function hideText(){
     var b = document.getElementById('overlayTextBox');
     if (b.classList.contains('hidden')) return;
     b.classList.remove('show');
-    b.classList.add('hide');
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        b.classList.add('hide');
+      });
+    });
     clearTimeout(hideTimer);
     hideTimer = setTimeout(function(){
       b.classList.add('hidden');
       b.classList.remove('hide');
-    }, 300);
+    }, 420);
   }
   function runOrQueue(fn){ if (ytReady) fn(); else cmdQueue.push(fn); }
+
+  // Fixes the black "notch"/curve some viewers saw behind the glass overlay:
+  // the YouTube embed letterboxes with solid black bars whenever the video's
+  // 16:9 ratio doesn't exactly match the window ratio, and the overlay's
+  // backdrop-filter was sampling those black bars. This resizes the underlying
+  // iframe to always cover the full viewport (crop instead of letterbox), like
+  // CSS object-fit:cover, so there is never a black area behind the glass.
+  function fitPlayerCover(){
+    var el = document.getElementById('ytplayer');
+    if (!el || el.tagName !== 'IFRAME') return;
+    var vw = window.innerWidth, vh = window.innerHeight;
+    var ratio = 16 / 9;
+    var w, h;
+    if (vw / vh > ratio) { w = vw; h = Math.ceil(w / ratio); }
+    else { h = vh; w = Math.ceil(h * ratio); }
+    el.style.position = 'fixed';
+    el.style.left = Math.round((vw - w) / 2) + 'px';
+    el.style.top = Math.round((vh - h) / 2) + 'px';
+    el.style.width = w + 'px';
+    el.style.height = h + 'px';
+  }
+  window.addEventListener('resize', fitPlayerCover);
 
   window.YumeProjector = {
     loadVideo: function(vid, time){
@@ -884,6 +929,8 @@ function buildProjectorHTML(initState) {
         onReady: function () {
           ytReady = true;
           ytPlayer.setVolume(initState.volume != null ? initState.volume : 80);
+          fitPlayerCover();
+          setTimeout(fitPlayerCover, 300); // re-fit once the swapped iframe settles
           if (initState.vid) {
             document.getElementById('emptyHint').classList.add('hidden');
             ytPlayer.loadVideoById({ videoId: initState.vid, startSeconds: initState.time || 0 });

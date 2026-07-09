@@ -16,9 +16,7 @@
     --card-bg-hover:#FFF7DD22;
     --panel-bg:#12161ecc;
     --danger:#e08a8a;
-    --blur-amt: 14px;
-    --overlay-orange: rgba(242,143,41,0.25);
-    --overlay-orange-border: rgba(242,143,41,0.55);
+    --orange:#f28f29;
   }
   *{box-sizing:border-box; margin:0; padding:0;}
   html,body{height:100%;}
@@ -34,9 +32,9 @@
     content:'';
     position:fixed; inset:-40px; z-index:-2;
     background:
-      linear-gradient(180deg, #0b0d12cc, #0b0d12e6),
-      url('https://images.unsplash.com/photo-1578632767115-351597cf2477?q=80&w=1974&auto=format&fit=crop') center/cover no-repeat;
-    filter: blur(14px);
+      linear-gradient(180deg, #0b0d12d9, #0b0d12ee),
+      url('https://raw.githubusercontent.com/LOUKA51/Youtube/refs/heads/main/1366762.webp') center/cover no-repeat;
+    filter: blur(18px);
   }
 
   ::selection{ background:var(--accent); color:#0b0d12; }
@@ -50,10 +48,11 @@
 
   .glass{
     background:var(--panel-bg);
-    backdrop-filter: blur(14px) saturate(140%);
-    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
     border:1px solid #91C4C333;
-    border-radius:16px;
+    border-radius:18px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.35);
   }
 
   /* ===== TOP BAR ===== */
@@ -62,14 +61,15 @@
     display:flex; align-items:center; gap:16px;
     padding:12px 20px;
     background:#0b0d12aa;
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
     border-bottom:1px solid #91C4C333;
   }
   .logo{
     display:flex; align-items:center; gap:8px;
     font-weight:700; font-size:1.15rem; letter-spacing:.5px;
     white-space:nowrap;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.55);
   }
   .logo .dot{ width:10px; height:10px; border-radius:50%; background:var(--success); box-shadow:0 0 8px var(--success); }
   .logo .dot.live{ background:var(--accent); box-shadow:0 0 8px var(--accent); animation:pulse 1.4s ease-in-out infinite; }
@@ -124,7 +124,7 @@
     background:#1a1e26; border:1px solid #91C4C333;
   }
   .nowplaying .np-info{ flex:1; min-width:0; }
-  .nowplaying h2{ font-size:1.1rem; font-weight:700; line-height:1.35; margin-bottom:6px; }
+  .nowplaying h2{ font-size:1.1rem; font-weight:700; line-height:1.35; margin-bottom:6px; text-shadow:0 2px 10px rgba(0,0,0,0.5); }
   .nowplaying .channel{ color:var(--text-dim); font-size:.85rem; }
   .nowplaying .np-empty{ color:var(--text-dim); font-size:.9rem; }
 
@@ -173,10 +173,7 @@
 
   /* ===== PROJECTOR PANEL ===== */
   .projector-panel{ padding:16px; display:flex; flex-direction:column; gap:12px; }
-  .projector-panel h3{ font-size:.95rem; font-weight:700; letter-spacing:.3px; }
-  .blur-row{ display:flex; align-items:center; gap:10px; }
-  .blur-row input[type=range]{ flex:1; accent-color:var(--accent); }
-  .blur-row .val{ font-size:.8rem; color:var(--text-dim); min-width:44px; text-align:right; }
+  .projector-panel h3{ font-size:.95rem; font-weight:700; letter-spacing:.3px; text-shadow:0 2px 10px rgba(0,0,0,0.5); }
   .btn{ padding:9px 18px; border-radius:10px; font-size:.85rem; font-weight:600; }
   .btn.primary{ background:var(--accent); color:#0b0d12; }
   .btn.primary:hover{ background:var(--accent-dark); }
@@ -188,25 +185,17 @@
   .proj-status .led{ width:8px; height:8px; border-radius:50%; background:var(--danger); }
   .proj-status.ok .led{ background:var(--success); box-shadow:0 0 6px var(--success); }
 
-  /* ===== RIGHT: SIDEBAR ===== */
+  /* ===== RIGHT: SIDEBAR (Playlist & Search shown simultaneously, no tabs) ===== */
   .side-col{ display:flex; flex-direction:column; gap:16px; min-width:0; }
   .panel{ padding:16px; display:flex; flex-direction:column; gap:12px; }
   .panel-head{ display:flex; align-items:center; justify-content:space-between; }
-  .panel-head h3{ font-size:.95rem; font-weight:700; letter-spacing:.3px; }
+  .panel-head h3{ font-size:.95rem; font-weight:700; letter-spacing:.3px; text-shadow:0 2px 10px rgba(0,0,0,0.5); }
   .panel-head .count{
     font-size:.72rem; color:#0b0d12; background:var(--success);
     padding:2px 9px; border-radius:999px; font-weight:700;
   }
-  .tabs{ display:flex; gap:6px; }
-  .tab{
-    flex:1; text-align:center; padding:8px; border-radius:10px;
-    background:#FFF7DD0d; border:1px solid transparent; color:var(--text-dim);
-    font-size:.82rem; transition:.15s;
-  }
-  .tab.active{ background:#FFF7DD1f; border-color:var(--border); color:var(--text); font-weight:600; }
 
-  .list{ display:flex; flex-direction:column; gap:8px; max-height:60vh; overflow-y:auto; padding-right:2px; }
-  .list.loading, .list.empty{ align-items:center; justify-content:center; min-height:120px; }
+  .list{ display:flex; flex-direction:column; gap:8px; max-height:38vh; overflow-y:auto; padding-right:2px; }
   .state-msg{ color:var(--text-dim); font-size:.85rem; text-align:center; padding:24px 10px; }
 
   .item{
@@ -243,11 +232,11 @@
 
   /* ===== MODAL ===== */
   .modal-overlay{
-    position:fixed; inset:0; background:#0b0d12b3; backdrop-filter:blur(4px);
+    position:fixed; inset:0; background:#0b0d12b3; backdrop-filter:blur(6px);
     display:flex; align-items:center; justify-content:center; z-index:100; padding:20px;
   }
-  .modal{ width:100%; max-width:420px; padding:22px; display:flex; flex-direction:column; gap:14px; }
-  .modal h3{ font-size:1.05rem; font-weight:700; }
+  .modal{ width:100%; max-width:440px; padding:22px; display:flex; flex-direction:column; gap:14px; }
+  .modal h3{ font-size:1.05rem; font-weight:700; text-shadow:0 2px 10px rgba(0,0,0,0.5); }
   .modal p{ font-size:.82rem; color:var(--text-dim); line-height:1.5; }
   .modal input{
     width:100%; padding:10px 12px; background:#FFF7DD12; border:1px solid var(--border);
@@ -255,6 +244,14 @@
   }
   .modal input:focus{ border-color:var(--accent); }
   .modal-actions{ display:flex; gap:10px; justify-content:flex-end; }
+  .kb-list{ display:flex; flex-direction:column; gap:10px; }
+  .kb-row{ display:flex; align-items:center; gap:12px; }
+  .kb-key{
+    flex-shrink:0; min-width:64px; text-align:center; padding:6px 10px; border-radius:8px;
+    background:#FFF7DD14; border:1px solid var(--border); font-weight:700; font-size:.8rem;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+  }
+  .kb-desc{ font-size:.82rem; color:var(--text-dim); }
 
   .toast-wrap{ position:fixed; bottom:20px; right:20px; z-index:200; display:flex; flex-direction:column; gap:8px; }
   .toast{
@@ -302,6 +299,7 @@
       <button class="ctrl-btn" id="btnNext">Next ⏭</button>
       <button class="ctrl-btn" id="btnShuffle" title="Shuffle">🔀 Shuffle</button>
       <button class="ctrl-btn" id="btnLoop" title="Loop">🔁 Loop</button>
+      <button class="ctrl-btn" id="btnMute" title="Mute (M)">🔊 Mute</button>
       <div class="spacer"></div>
       <div class="volume-row">
         🔊 <input type="range" id="volumeSlider" min="0" max="100" value="80">
@@ -325,39 +323,27 @@
         <h3>🖥️ Layar Proyektor</h3>
         <div class="proj-status" id="projStatus"><span class="led"></span><span id="projStatusText">Belum terbuka</span></div>
       </div>
-      <div class="blur-row">
-        <span style="font-size:.85rem;color:var(--text-dim);">🌫️ Blur</span>
-        <input type="range" id="blurSlider" min="0" max="40" value="14">
-        <span class="val" id="blurValue">14px</span>
-      </div>
       <button class="btn primary block" id="btnOpenDisplay">🖥️ Buka Layar Proyektor</button>
-      <p class="hint">Layar Proyektor dibuat langsung di memori (tanpa server) via <code>window.open()</code>. Sinkronisasi satu arah dari Operator ke Proyektor. Hotkeys: <b>Enter</b> kirim teks · <b>T</b> sembunyikan teks · <b>P</b> play/pause · <b>I</b> panduan hotkeys.</p>
+      <p class="hint">Menekan <b>Play</b> otomatis membuka Layar Proyektor dalam mode layar penuh jika belum aktif. Sinkronisasi satu arah Operator → Proyektor via <code>window.open()</code>, tanpa server. Tekan <b>I</b> untuk panduan hotkeys lengkap.</p>
     </div>
   </div>
 
-  <!-- RIGHT: SIDEBAR -->
+  <!-- RIGHT: SIDEBAR — Playlist & Pencarian tampil bersamaan, tanpa tab -->
   <div class="side-col">
     <div class="glass panel">
-      <div class="tabs">
-        <div class="tab active" data-tab="playlist">Antrean Playlist</div>
-        <div class="tab" data-tab="search">Hasil Pencarian</div>
+      <div class="panel-head">
+        <h3 id="playlistPanelTitle">📃 Antrean Playlist</h3>
+        <span class="count" id="playlistCount">0</span>
       </div>
+      <div class="list" id="playlistList"></div>
+    </div>
 
-      <div id="tab-playlist">
-        <div class="panel-head">
-          <h3 id="playlistPanelTitle">Playlist</h3>
-          <span class="count" id="playlistCount">0</span>
-        </div>
-        <div class="list" id="playlistList"></div>
+    <div class="glass panel">
+      <div class="panel-head">
+        <h3>🔎 Hasil Pencarian</h3>
+        <span class="count" id="searchCount">0</span>
       </div>
-
-      <div id="tab-search" class="hidden">
-        <div class="panel-head">
-          <h3>Hasil Pencarian</h3>
-          <span class="count" id="searchCount">0</span>
-        </div>
-        <div class="list" id="searchList"></div>
-      </div>
+      <div class="list" id="searchList"></div>
     </div>
   </div>
 
@@ -397,12 +383,15 @@
 <div class="modal-overlay hidden" id="keybindModal">
   <div class="glass modal">
     <h3>⌨️ Petunjuk Hotkeys</h3>
-    <p>
-      <b>Enter</b> — kirim teks di kotak ketik ke Layar Proyektor<br>
-      <b>T</b> — sembunyikan Pop-up Teks di Layar Proyektor<br>
-      <b>P</b> — toggle Play / Pause video<br>
-      <b>I</b> — tampilkan / sembunyikan panduan ini
-    </p>
+    <div class="kb-list">
+      <div class="kb-row"><span class="kb-key">Enter</span><span class="kb-desc">Kirim teks dari TypingBox &amp; tampilkan pop-up oranye di Layar Proyektor</span></div>
+      <div class="kb-row"><span class="kb-key">T</span><span class="kb-desc">Sembunyikan pop-up teks di Layar Proyektor</span></div>
+      <div class="kb-row"><span class="kb-key">I</span><span class="kb-desc">Tampilkan / sembunyikan panduan hotkeys ini</span></div>
+      <div class="kb-row"><span class="kb-key">P</span><span class="kb-desc">Toggle Play / Pause video</span></div>
+      <div class="kb-row"><span class="kb-key">→</span><span class="kb-desc">Lompat ke video berikutnya (Next)</span></div>
+      <div class="kb-row"><span class="kb-key">←</span><span class="kb-desc">Kembali ke video sebelumnya (Previous)</span></div>
+      <div class="kb-row"><span class="kb-key">M</span><span class="kb-desc">Toggle Mute / Unmute suara</span></div>
+    </div>
     <div class="modal-actions">
       <button class="btn primary" id="btnCloseKeybind">Tutup</button>
     </div>
@@ -411,7 +400,7 @@
 
 <script>
 /* =========================================================================
-   YUME PLAYER — OPERATOR CONSOLE
+   YUME PLAYER — OPERATOR CONSOLE (Anime Glassmorphism Edition)
    Vanilla JS, LocalStorage persistence, YouTube Data API v3 search.
    The Operator window holds NO video player. It opens a Projector window
    (window.open + document.write, single-file, no server) which owns the
@@ -429,7 +418,8 @@ const STORAGE_KEYS = {
 };
 const SEARCH_CACHE_TTL = 1000 * 60 * 10; // 10 minutes
 const DEBOUNCE_MS = 550;
-const BLUR_KEY = 'yume_blur_level';
+const FALLBACK_THUMB = 'https://raw.githubusercontent.com/LOUKA51/Youtube/refs/heads/main/Thumbnail.webp';
+const PROJECTOR_BLUR = 20; // locked permanently — no operator-facing slider anymore
 
 /* ---------------------------- Storage helpers ---------------------------- */
 const Store = {
@@ -460,7 +450,6 @@ let playlists = Store.get(STORAGE_KEYS.PLAYLISTS, null);
 let videos = Store.get(STORAGE_KEYS.VIDEOS, {});
 let activePlaylistId = Store.get(STORAGE_KEYS.ACTIVE_PLAYLIST, null);
 let playerState = Store.get(STORAGE_KEYS.PLAYER_STATE, { videoId: null, time: 0, volume: 80, loop: false, shuffle: false });
-let blurLevel = Store.get(BLUR_KEY, 14);
 
 if (!playlists) {
   const defaultId = 'pl_' + Date.now();
@@ -476,11 +465,9 @@ if (!activePlaylistId || !playlists[activePlaylistId]) {
 
 let currentVideoId = playerState.videoId || null;
 let isPlaying = false;
+let isMuted = false;
 let searchResults = []; // array of videoIds currently shown from last search
 let projectorWin = null;
-
-document.getElementById('blurSlider').value = blurLevel;
-document.getElementById('blurValue').textContent = blurLevel + 'px';
 
 /* --------------------------- API status UI -------------------------------- */
 function refreshApiStatusUI() {
@@ -569,17 +556,6 @@ document.getElementById('btnDeletePlaylist').addEventListener('click', () => {
   toast('Playlist dihapus');
 });
 
-/* ------------------------------ Tabs --------------------------------------- */
-document.querySelectorAll('.tab').forEach(tab => {
-  tab.addEventListener('click', () => {
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    tab.classList.add('active');
-    const target = tab.dataset.tab;
-    document.getElementById('tab-playlist').classList.toggle('hidden', target !== 'playlist');
-    document.getElementById('tab-search').classList.toggle('hidden', target !== 'search');
-  });
-});
-
 /* ------------------------------ Playlist select ---------------------------- */
 function renderPlaylistSelect() {
   const sel = document.getElementById('playlistSelect');
@@ -603,9 +579,10 @@ function videoItemHTML(vid, { showPlaylistActions, showSearchActions, inPlaylist
   const v = videos[vid];
   if (!v) return '';
   const playing = vid === currentVideoId;
+  const thumbSrc = v.thumb || FALLBACK_THUMB;
   return `
     <div class="item ${playing ? 'playing' : ''}" data-vid="${vid}" data-playlist="${inPlaylistId || ''}">
-      <img src="${v.thumb}" alt="" loading="lazy">
+      <img src="${thumbSrc}" alt="" loading="lazy" onerror="this.onerror=null;this.src='${FALLBACK_THUMB}';">
       <div class="info">
         <div class="title">${escapeHTML(v.title)}</div>
         <div class="sub">${escapeHTML(v.channel)}</div>
@@ -627,7 +604,7 @@ function escapeHTML(str) {
 function renderPlaylistList() {
   renderPlaylistSelect();
   const pl = playlists[activePlaylistId];
-  document.getElementById('playlistPanelTitle').textContent = pl ? pl.name : 'Playlist';
+  document.getElementById('playlistPanelTitle').textContent = pl ? `📃 ${pl.name}` : '📃 Antrean Playlist';
   const list = document.getElementById('playlistList');
   const count = document.getElementById('playlistCount');
   if (!pl || pl.videoIds.length === 0) {
@@ -708,11 +685,6 @@ async function runSearch(query) {
     settingsModal.classList.remove('hidden');
     return;
   }
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.querySelector('.tab[data-tab="search"]').classList.add('active');
-  document.getElementById('tab-playlist').classList.add('hidden');
-  document.getElementById('tab-search').classList.remove('hidden');
-
   const cache = Store.get(STORAGE_KEYS.SEARCH_CACHE, {});
   const cached = cache[query];
   if (cached && (Date.now() - cached.ts) < SEARCH_CACHE_TTL) {
@@ -774,38 +746,46 @@ function buildProjectorHTML(initState) {
   html,body{height:100%;background:#000;overflow:hidden;}
   body::before{
     content:'';position:fixed;inset:-60px;z-index:-2;
-    background:linear-gradient(180deg,#0b0d12cc,#0b0d12e6), url('https://images.unsplash.com/photo-1578632767115-351597cf2477?q=80&w=1974&auto=format&fit=crop') center/cover no-repeat;
-    filter:blur(var(--blur-amt));transition:filter .2s ease;
+    background:linear-gradient(180deg,#0b0d12d9,#0b0d12ee), url('https://raw.githubusercontent.com/LOUKA51/Youtube/refs/heads/main/1366762.webp') center/cover no-repeat;
+    filter:blur(var(--blur-amt));
   }
   #stage{position:fixed;inset:0;}
   #ytplayer{width:100%;height:100%;}
   .empty-hint{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;color:#FFF7DDb3;font-family:'Segoe UI',sans-serif;}
   .empty-hint .big{font-size:3rem;opacity:.5;}
+
   .overlay-textbox{
-    position:absolute; left:50%; bottom:7%; transform:translateX(-50%);
-    max-width:82%; padding:20px 34px; border-radius:20px; z-index:30;
-    background: rgba(18,20,26,0.72);
-    backdrop-filter: blur(18px) saturate(160%);
-    -webkit-backdrop-filter: blur(18px) saturate(160%);
-    border:1px solid rgba(255,255,255,0.22);
-    box-shadow: 0 12px 40px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.12);
+    position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    max-width:70%; min-width:320px; padding:30px 50px; border-radius:24px; z-index:30;
+    background: rgba(242,143,41,0.16);
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    border: 1.5px solid rgba(242,163,71,0.55);
+    box-shadow: 0 0 50px rgba(242,143,41,0.28), 0 14px 44px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.15);
     text-align:center; font-family:'Segoe UI',sans-serif;
   }
   .overlay-textbox.hidden{display:none;}
-  #overlayTextContent{font-size:clamp(1.1rem,2.6vw,2rem);font-weight:700;line-height:1.4;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.9), 0 2px 12px rgba(0,0,0,0.7);word-break:break-word;letter-spacing:.2px;}
+  .corner{ position:absolute; width:18px; height:18px; border-color:#ffb35c; opacity:.95; }
+  .corner.tl{ top:-9px; left:-9px; border-top:3px solid; border-left:3px solid; border-top-left-radius:6px; }
+  .corner.tr{ top:-9px; right:-9px; border-top:3px solid; border-right:3px solid; border-top-right-radius:6px; }
+  .corner.bl{ bottom:-9px; left:-9px; border-bottom:3px solid; border-left:3px solid; border-bottom-left-radius:6px; }
+  .corner.br{ bottom:-9px; right:-9px; border-bottom:3px solid; border-right:3px solid; border-bottom-right-radius:6px; }
+  #overlayTextContent{font-size:clamp(1.2rem,2.8vw,2.2rem);font-weight:700;line-height:1.4;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.9), 0 2px 14px rgba(0,0,0,0.75);word-break:break-word;letter-spacing:.2px;}
 </style>
 </head>
 <body>
 <div id="stage">
   <div id="ytplayer"></div>
-  <div class="empty-hint" id="emptyHint"><div class="big"></div></div>
-  <div class="overlay-textbox hidden" id="overlayTextBox"><div id="overlayTextContent"></div></div>
+  <div class="empty-hint" id="emptyHint"><div class="big">🎬</div></div>
+  <div class="overlay-textbox hidden" id="overlayTextBox">
+    <span class="corner tl"></span><span class="corner tr"></span><span class="corner bl"></span><span class="corner br"></span>
+    <div id="overlayTextContent"></div>
+  </div>
 </div>
 <script>
   var initState = ${stateJSON};
   var ytPlayer = null, ytReady = false, cmdQueue = [];
 
-  function applyBlur(v){ document.documentElement.style.setProperty('--blur-amt', v + 'px'); }
   function showText(t){
     var b = document.getElementById('overlayTextBox');
     var c = document.getElementById('overlayTextContent');
@@ -824,9 +804,10 @@ function buildProjectorHTML(initState) {
     play: function(){ runOrQueue(function(){ ytPlayer.playVideo(); }); },
     pause: function(){ runOrQueue(function(){ ytPlayer.pauseVideo(); }); },
     setVolume: function(v){ runOrQueue(function(){ ytPlayer.setVolume(v); }); },
+    mute: function(){ runOrQueue(function(){ ytPlayer.mute(); }); },
+    unmute: function(){ runOrQueue(function(){ ytPlayer.unMute(); }); },
     showText: showText,
-    hideText: hideText,
-    setBlur: applyBlur
+    hideText: hideText
   };
 
   window.onYouTubeIframeAPIReady = function () {
@@ -860,6 +841,15 @@ function buildProjectorHTML(initState) {
   tag.src = 'https://www.youtube.com/iframe_api';
   document.head.appendChild(tag);
 
+  // Best-effort auto fullscreen; some browsers block cross-window fullscreen
+  // requests, so we also arm a one-time click-to-fullscreen fallback on stage.
+  try { document.documentElement.requestFullscreen && document.documentElement.requestFullscreen().catch(function(){}); } catch(e){}
+  document.getElementById('stage').addEventListener('click', function(){
+    if (!document.fullscreenElement) {
+      try { document.documentElement.requestFullscreen(); } catch(e){}
+    }
+  });
+
   document.addEventListener('keydown', function (e) {
     var tagName = (e.target.tagName || '').toLowerCase();
     if (tagName === 'input' || tagName === 'textarea') return;
@@ -882,14 +872,13 @@ function buildProjectorHTML(initState) {
 function openProjector() {
   if (projectorWin && !projectorWin.closed) {
     projectorWin.focus();
-    toast('Layar Proyektor sudah terbuka');
     return;
   }
   const initState = {
     vid: currentVideoId,
     time: playerState.time || 0,
     volume: playerState.volume != null ? playerState.volume : 80,
-    blur: blurLevel
+    blur: PROJECTOR_BLUR
   };
   projectorWin = window.open('', 'yume_projector', 'width=1280,height=720,menubar=no,toolbar=no,location=no');
   if (!projectorWin) {
@@ -904,6 +893,25 @@ function openProjector() {
 }
 document.getElementById('btnOpenDisplay').addEventListener('click', openProjector);
 
+function requestProjectorFullscreen() {
+  if (!projectorWin || projectorWin.closed) return;
+  try {
+    const el = projectorWin.document.documentElement;
+    if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
+    else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+  } catch (e) { /* cross-window fullscreen can be blocked by the browser; the
+                    Projector also arms its own click-to-fullscreen fallback */ }
+}
+
+// Called right before starting playback: opens the Projector automatically
+// (and requests fullscreen) if it isn't already open — no manual step needed.
+function ensureProjectorReady() {
+  if (!projectorWin || projectorWin.closed) {
+    openProjector();
+    requestProjectorFullscreen();
+  }
+}
+
 function sendToProjector(action, payload) {
   if (!projectorWin || projectorWin.closed) return false;
   try {
@@ -913,9 +921,10 @@ function sendToProjector(action, payload) {
     else if (action === 'play') api.play();
     else if (action === 'pause') api.pause();
     else if (action === 'volume') api.setVolume(payload.volume);
+    else if (action === 'mute') api.mute();
+    else if (action === 'unmute') api.unmute();
     else if (action === 'text') api.showText(payload.text);
     else if (action === 'hideText') api.hideText();
-    else if (action === 'blur') api.setBlur(payload.value);
     return true;
   } catch (err) {
     console.error('Perintah ke Proyektor gagal', err);
@@ -934,12 +943,17 @@ window.YumeOperatorCallback = {
 function updatePlayPauseBtn() {
   document.getElementById('btnPlayPause').textContent = isPlaying ? '⏸ Pause' : '▶ Play';
 }
+function updateMuteBtn() {
+  document.getElementById('btnMute').textContent = isMuted ? '🔇 Unmute' : '🔊 Mute';
+  document.getElementById('btnMute').classList.toggle('active', isMuted);
+}
 
 function loadVideoIntoPlayer(vid, startSeconds = 0, autoplay = true) {
+  if (autoplay) ensureProjectorReady();
   currentVideoId = vid;
   const v = videos[vid];
   if (v) {
-    document.getElementById('nowThumb').src = v.thumb;
+    document.getElementById('nowThumb').src = v.thumb || FALLBACK_THUMB;
     document.getElementById('nowThumb').style.display = '';
     document.getElementById('nowEmpty').classList.add('hidden');
     document.getElementById('nowInfo').classList.remove('hidden');
@@ -963,9 +977,21 @@ function playVideo(vid) {
 
 document.getElementById('btnPlayPause').addEventListener('click', () => {
   if (!currentVideoId) { toast('Pilih video terlebih dahulu', true); return; }
-  if (isPlaying) { sendToProjector('pause'); isPlaying = false; }
-  else { sendToProjector('play'); isPlaying = true; }
+  if (isPlaying) {
+    sendToProjector('pause');
+    isPlaying = false;
+  } else {
+    ensureProjectorReady();
+    sendToProjector('play');
+    isPlaying = true;
+  }
   updatePlayPauseBtn();
+});
+
+document.getElementById('btnMute').addEventListener('click', () => {
+  isMuted = !isMuted;
+  sendToProjector(isMuted ? 'mute' : 'unmute');
+  updateMuteBtn();
 });
 
 function getActiveQueue() {
@@ -1015,6 +1041,7 @@ document.getElementById('volumeSlider').addEventListener('input', (e) => {
 
 function handleVideoEnded() {
   if (playerState.loop) {
+    ensureProjectorReady();
     sendToProjector('loadVideo', { vid: currentVideoId, time: 0 });
     sendToProjector('play');
     isPlaying = true;
@@ -1040,14 +1067,6 @@ document.getElementById('btnHideText').addEventListener('click', () => {
   sendToProjector('hideText');
 });
 
-/* ------------------------------ Blur Slider ---------------------------------- */
-document.getElementById('blurSlider').addEventListener('input', (e) => {
-  blurLevel = parseInt(e.target.value, 10);
-  document.getElementById('blurValue').textContent = blurLevel + 'px';
-  Store.set(BLUR_KEY, blurLevel);
-  sendToProjector('blur', { value: blurLevel });
-});
-
 /* ------------------------------ Global Hotkeys ------------------------------- */
 document.addEventListener('keydown', (e) => {
   const tag = (e.target.tagName || '').toLowerCase();
@@ -1055,14 +1074,30 @@ document.addEventListener('keydown', (e) => {
   const key = e.key.toLowerCase();
   if (key === 't') {
     sendToProjector('hideText');
+  } else if (key === 'i') {
+    toggleKeybindModal();
   } else if (key === 'p') {
     e.preventDefault();
     if (!currentVideoId) return;
-    if (isPlaying) { sendToProjector('pause'); isPlaying = false; }
-    else { sendToProjector('play'); isPlaying = true; }
+    if (isPlaying) {
+      sendToProjector('pause');
+      isPlaying = false;
+    } else {
+      ensureProjectorReady();
+      sendToProjector('play');
+      isPlaying = true;
+    }
     updatePlayPauseBtn();
-  } else if (key === 'i') {
-    toggleKeybindModal();
+  } else if (e.key === 'ArrowRight') {
+    e.preventDefault();
+    playNext();
+  } else if (e.key === 'ArrowLeft') {
+    e.preventDefault();
+    playPrev();
+  } else if (key === 'm') {
+    isMuted = !isMuted;
+    sendToProjector(isMuted ? 'mute' : 'unmute');
+    updateMuteBtn();
   }
 });
 
@@ -1070,6 +1105,7 @@ document.addEventListener('keydown', (e) => {
 function init() {
   refreshApiStatusUI();
   refreshProjectorStatusUI();
+  updateMuteBtn();
   document.getElementById('btnShuffle').classList.toggle('active', !!playerState.shuffle);
   document.getElementById('btnLoop').classList.toggle('active', !!playerState.loop);
   renderPlaylistSelect();
@@ -1077,7 +1113,7 @@ function init() {
   renderSearchList();
   if (currentVideoId && videos[currentVideoId]) {
     const v = videos[currentVideoId];
-    document.getElementById('nowThumb').src = v.thumb;
+    document.getElementById('nowThumb').src = v.thumb || FALLBACK_THUMB;
     document.getElementById('nowThumb').style.display = '';
     document.getElementById('nowEmpty').classList.add('hidden');
     document.getElementById('nowInfo').classList.remove('hidden');

@@ -801,10 +801,10 @@ function buildProjectorHTML(initState) {
     height:70vh; min-height:480px; max-height:920px;
     padding:88px 120px; border-radius:38px; z-index:30;
     background:
-      radial-gradient(120% 160% at 50% 0%, rgba(255,255,255,0.10), rgba(255,255,255,0) 55%),
-      linear-gradient(150deg, rgba(38,34,48,0.62), rgba(16,16,22,0.6));
-    backdrop-filter: blur(22px) saturate(170%);
-    -webkit-backdrop-filter: blur(22px) saturate(170%);
+      radial-gradient(120% 160% at 50% 0%, rgba(255,255,255,0.08), rgba(255,255,255,0) 55%),
+      linear-gradient(150deg, rgba(28,25,36,0.72), rgba(10,10,14,0.72));
+    backdrop-filter: blur(16px) saturate(170%);
+    -webkit-backdrop-filter: blur(16px) saturate(170%);
     border: 1px solid rgba(255,255,255,0.20);
     box-shadow: 0 30px 90px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.14);
     text-align:center; font-family:'Segoe UI',sans-serif;
@@ -979,8 +979,25 @@ function buildProjectorHTML(initState) {
     play: function(){ runOrQueue(function(){ ytPlayer.playVideo(); armAutoplayWatchdog(); }); },
     pause: function(){ runOrQueue(function(){ clearTimeout(autoplayWatchdog); ytPlayer.pauseVideo(); }); },
     setVolume: function(v){ runOrQueue(function(){ ytPlayer.setVolume(v); }); },
-    mute: function(){ runOrQueue(function(){ ytPlayer.mute(); notifyMuteChange(true); }); },
-    unmute: function(){ runOrQueue(function(){ ytPlayer.unMute(); notifyMuteChange(false); }); },
+    // mute()/unmute() don't just fire-and-assume: some browsers silently
+    // refuse an unmute that wasn't triggered by a direct gesture inside THIS
+    // window (a click in the Operator window doesn't count as user
+    // activation here), so ytPlayer.unMute() can appear to run but leave the
+    // player actually muted. We re-check the real state via
+    // ytPlayer.isMuted() right after and report THAT back to the Operator,
+    // so the button never gets stuck out of sync with what's really playing.
+    mute: function(){
+      runOrQueue(function(){
+        ytPlayer.mute();
+        setTimeout(function(){ notifyMuteChange(ytPlayer.isMuted()); }, 150);
+      });
+    },
+    unmute: function(){
+      runOrQueue(function(){
+        ytPlayer.unMute();
+        setTimeout(function(){ notifyMuteChange(ytPlayer.isMuted()); }, 150);
+      });
+    },
     showText: showText,
     hideText: hideText
   };

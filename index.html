@@ -31,13 +31,9 @@
   body::before{
     content:'';
     position:fixed; inset:-40px; z-index:-2;
-    background-image:
+    background:
       linear-gradient(180deg, #0b0d12d9, #0b0d12ee),
-      url('./asset/bg.webp');
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    background-attachment: fixed;
+      url('https://raw.githubusercontent.com/LOUKA51/Youtube/refs/heads/main/1366762.webp') center/cover no-repeat;
     filter: blur(18px);
   }
 
@@ -146,20 +142,6 @@
   .ctrl-btn.active{ background:var(--accent); color:#0b0d12; border-color:var(--accent); font-weight:600; }
   .ctrl-btn.play-main{ background:var(--accent); color:#0b0d12; font-weight:700; }
   .ctrl-btn.play-main:hover{ background:var(--accent-dark); }
-  /* Live feedback pill fed by REAL state coming back from the Projector
-     window (buffering / autoplay-blocked / load error) — frosted-glass
-     pill consistent with .api-status / .proj-status treatment. */
-  .state-pill{
-    display:flex; align-items:center; gap:6px;
-    font-size:.78rem; font-weight:600; color:var(--orange);
-    background:#f28f2922; backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border:1px solid #f28f2955; border-radius:999px;
-    padding:8px 14px; white-space:nowrap;
-    animation:pulse 1.4s ease-in-out infinite;
-  }
-  .state-pill.err{ color:var(--danger); background:#e08a8a22; border-color:#e08a8a55; animation:none; }
-  .state-pill.hidden{ display:none; }
   .spacer{ flex:1; }
   .volume-row{ display:flex; align-items:center; gap:8px; color:var(--text-dim); font-size:.85rem; }
   .volume-row input[type=range]{ width:100px; accent-color:var(--accent); }
@@ -236,10 +218,6 @@
   .item .badge-playing .bar:nth-child(2){ animation-delay:.2s; }
   .item .badge-playing .bar:nth-child(3){ animation-delay:.4s; }
   @keyframes eq{ 0%,100%{ transform:scaleY(.4);} 50%{ transform:scaleY(1);} }
-  /* Reflects REAL Projector state (bukan hanya klik lokal): dibekukan &
-     diredupkan saat video sebenarnya sedang paused/buffering di layar. */
-  .item .badge-playing.paused{ color:var(--text-dim); }
-  .item .badge-playing.paused .bar{ animation-play-state:paused; background:var(--text-dim); }
 
   .item-actions{ display:flex; flex-direction:column; gap:4px; justify-content:center; }
   .item-actions button{
@@ -317,7 +295,6 @@
 
     <div class="glass controls-row">
       <button class="ctrl-btn play-main" id="btnPlayPause">▶ Play</button>
-      <span class="state-pill hidden" id="playbackStatePill">⏳ Buffering...</span>
       <button class="ctrl-btn" id="btnPrev">⏮ Prev</button>
       <button class="ctrl-btn" id="btnNext">Next ⏭</button>
       <button class="ctrl-btn" id="btnShuffle" title="Shuffle">🔀 Shuffle</button>
@@ -366,7 +343,7 @@
         <div class="proj-status" id="projStatus"><span class="led"></span><span id="projStatusText">Belum terbuka</span></div>
       </div>
       <button class="btn primary block" id="btnOpenDisplay">🖥️ Buka Layar Proyektor</button>
-      <p class="hint">Menekan <b>Play</b> otomatis membuka Layar Proyektor dalam mode layar penuh jika belum aktif. Status Play/Pause/Buffering/Mute disinkronkan <b>dua arah</b> — Operator selalu mengikuti kondisi nyata di Layar Proyektor, termasuk saat autoplay diblokir browser. Tekan <b>I</b> untuk panduan hotkeys lengkap.</p>
+      <p class="hint">Menekan <b>Play</b> otomatis membuka Layar Proyektor dalam mode layar penuh jika belum aktif. Sinkronisasi satu arah Operator → Proyektor via <code>window.open()</code>, tanpa server. Tekan <b>I</b> untuk panduan hotkeys lengkap.</p>
     </div>
   </div>
 
@@ -427,12 +404,8 @@
    Vanilla JS, LocalStorage persistence, YouTube Data API v3 search.
    The Operator window holds NO video player. It opens a Projector window
    (window.open + document.write, single-file, no server) which owns the
-   real YT.Player instance. Commands flow Operator -> Projector via a direct
-   reference to window.YumeProjector on the popup (no BroadcastChannel).
-   State flows back Projector -> Operator via window.opener.YumeOperatorCallback
-   (onStateChange / onMuteChange / onAutoplayBlocked / onError / onEnded), so
-   Play/Pause, Mute, and buffering indicators always reflect what is ACTUALLY
-   happening on screen, not just the last local click.
+   real YT.Player instance. Sync is one-way: Operator -> Projector, via a
+   direct reference to window.YumeProjector on the popup (no BroadcastChannel).
    ========================================================================= */
 
 const STORAGE_KEYS = {
@@ -613,7 +586,7 @@ function videoItemHTML(vid, { showPlaylistActions, showSearchActions, inPlaylist
       <div class="info">
         <div class="title">${escapeHTML(v.title)}</div>
         <div class="sub">${escapeHTML(v.channel)}</div>
-        ${playing ? `<div class="badge-playing${isPlaying ? '' : ' paused'}"><span class="bar"></span><span class="bar"></span><span class="bar"></span> <span class="badge-label">${isPlaying ? 'Sedang diputar' : 'Dijeda'}</span></div>` : ''}
+        ${playing ? `<div class="badge-playing"><span class="bar"></span><span class="bar"></span><span class="bar"></span> Sedang diputar</div>` : ''}
       </div>
       <div class="item-actions">
         ${showSearchActions ? `<button class="add-btn" title="Tambah ke playlist" data-action="add" data-vid="${vid}">＋</button>` : ''}
@@ -780,10 +753,6 @@ function applySearchResults(items) {
 /* ------------------------- Projector bridge (one-way) ----------------------- */
 function buildProjectorHTML(initState) {
   const stateJSON = JSON.stringify(initState).replace(/</g, '\\u003c');
-  // Popup proyektor dibuka via window.open('', ...) + document.write, sehingga
-  // base document-nya adalah about:blank. Relative path tidak akan resolve di sana,
-  // maka path lokal dihitung menjadi absolute URL relatif terhadap halaman utama.
-  const bgAbsoluteUrl = new URL('./asset/bg.webp', window.location.href).href;
   return `<!DOCTYPE html>
 <html lang="id">
 <head>
@@ -795,10 +764,7 @@ function buildProjectorHTML(initState) {
   html,body{height:100%;background:#000;overflow:hidden;}
   body::before{
     content:'';position:fixed;inset:-60px;z-index:-2;
-    background-image:linear-gradient(180deg,#0b0d12d9,#0b0d12ee), url('${bgAbsoluteUrl}');
-    background-size:cover;
-    background-position:center;
-    background-repeat:no-repeat;
+    background:linear-gradient(180deg,#0b0d12d9,#0b0d12ee), url('https://raw.githubusercontent.com/LOUKA51/Youtube/refs/heads/main/1366762.webp') center/cover no-repeat;
     filter:blur(var(--blur-amt));
   }
   #stage{position:fixed;inset:0; background:#000; overflow:hidden;}
@@ -940,62 +906,18 @@ function buildProjectorHTML(initState) {
   }
   window.addEventListener('resize', fitPlayerCover);
 
-  // ---- Two-way sync helpers: every one of these is a best-effort, silent
-  // no-op if the Operator window was closed/navigated — mirrors the existing
-  // onEnded pattern, just generalized so we don't repeat try/catch 5x. ----
-  function callOperator(methodName){
-    return function(){
-      try {
-        var cb = window.opener && window.opener.YumeOperatorCallback;
-        if (cb && typeof cb[methodName] === 'function') cb[methodName].apply(null, arguments);
-      } catch (err) { /* Operator window closed/unreachable — ignore */ }
-    };
-  }
-  var notifyEnded = callOperator('onEnded');
-  var notifyStateChange = callOperator('onStateChange');
-  var notifyMuteChange = callOperator('onMuteChange');
-  var notifyAutoplayBlocked = callOperator('onAutoplayBlocked');
-  var notifyPlayerError = callOperator('onError');
-
-  // Autoplay-block watchdog: some browsers (Chrome/Brave/Edge) silently
-  // refuse unmuted autoplay — no error event fires, the player just never
-  // reaches PLAYING. We arm a short timer after every play() attempt; if
-  // the state hasn't become PLAYING/BUFFERING by then, we retry muted
-  // (which browsers reliably allow) and tell the Operator what happened so
-  // its Mute button/pill reflect reality instead of going stale.
-  var autoplayWatchdog = null;
-  function armAutoplayWatchdog(){
-    clearTimeout(autoplayWatchdog);
-    autoplayWatchdog = setTimeout(function(){
-      if (!ytPlayer) return;
-      var st = ytPlayer.getPlayerState();
-      if (st !== 1 && st !== 3) {
-        try {
-          ytPlayer.mute();
-          ytPlayer.playVideo();
-          notifyMuteChange(true);
-          notifyAutoplayBlocked({ message: 'Autoplay diblokir browser di Layar Proyektor — video diputar dalam mode Mute.' });
-        } catch (err) {}
-      }
-    }, 1400);
-  }
-
   window.YumeProjector = {
     loadVideo: function(vid, time){
       runOrQueue(function(){
         document.getElementById('emptyHint').classList.add('hidden');
         ytPlayer.loadVideoById({ videoId: vid, startSeconds: time || 0 });
-        // FIX: loadVideoById juga mencoba autoplay, tapi tanpa watchdog di sini
-        // kegagalan autoplay (browser block) tidak pernah terdeteksi/di-retry —
-        // video jadi "sangkut" di ikon play merah setiap ganti lagu.
-        armAutoplayWatchdog();
       });
     },
-    play: function(){ runOrQueue(function(){ ytPlayer.playVideo(); armAutoplayWatchdog(); }); },
-    pause: function(){ runOrQueue(function(){ clearTimeout(autoplayWatchdog); ytPlayer.pauseVideo(); }); },
+    play: function(){ runOrQueue(function(){ ytPlayer.playVideo(); }); },
+    pause: function(){ runOrQueue(function(){ ytPlayer.pauseVideo(); }); },
     setVolume: function(v){ runOrQueue(function(){ ytPlayer.setVolume(v); }); },
-    mute: function(){ runOrQueue(function(){ ytPlayer.mute(); notifyMuteChange(true); }); },
-    unmute: function(){ runOrQueue(function(){ ytPlayer.unMute(); notifyMuteChange(false); }); },
+    mute: function(){ runOrQueue(function(){ ytPlayer.mute(); }); },
+    unmute: function(){ runOrQueue(function(){ ytPlayer.unMute(); }); },
     showText: showText,
     hideText: hideText
   };
@@ -1013,29 +935,18 @@ function buildProjectorHTML(initState) {
           if (initState.vid) {
             document.getElementById('emptyHint').classList.add('hidden');
             ytPlayer.loadVideoById({ videoId: initState.vid, startSeconds: initState.time || 0 });
-            armAutoplayWatchdog();
           }
           cmdQueue.forEach(function (fn) { fn(); });
           cmdQueue = [];
         },
         onStateChange: function (e) {
-          // PLAYING or BUFFERING means autoplay clearly succeeded — disarm
-          // the watchdog so it doesn't fire a false "blocked" retry later.
-          if (e.data === YT.PlayerState.PLAYING || e.data === YT.PlayerState.BUFFERING) {
-            clearTimeout(autoplayWatchdog);
-          }
-          // Report every real state (-1 UNSTARTED, 1 PLAYING, 2 PAUSED,
-          // 3 BUFFERING, 5 CUED) back to the Operator so its Play/Pause
-          // button and buffering pill always match what's actually on screen.
-          notifyStateChange(e.data);
           if (e.data === YT.PlayerState.ENDED) {
-            notifyEnded();
+            try {
+              if (window.opener && window.opener.YumeOperatorCallback) {
+                window.opener.YumeOperatorCallback.onEnded();
+              }
+            } catch (err) {}
           }
-        },
-        onError: function (e) {
-          // Video gagal dimuat (dihapus/private/embedding disabled/dsb) —
-          // beri tahu Operator supaya tombol Play/Pause tidak nyangkut.
-          notifyPlayerError(e.data);
         }
       }
     });
@@ -1135,71 +1046,16 @@ function sendToProjector(action, payload) {
   }
 }
 
-// Two-way bridge: the Projector calls these back directly (via window.opener,
-// no BroadcastChannel) to report what is ACTUALLY happening on screen —
-// video ended, real play/pause/buffering state, mute toggled by an autoplay
-// fallback, and load errors — so the Operator UI never goes stale/desync.
+// One necessary exception to the strict one-way flow: the Projector calls this
+// back directly (via window.opener) purely to signal "video ended", so
+// Loop/Shuffle/Auto-Next keeps working. No BroadcastChannel is used.
 window.YumeOperatorCallback = {
-  onEnded: function () { handleVideoEnded(); },
-  onStateChange: function (state) { handleProjectorStateChange(state); },
-  onMuteChange: function (muted) { handleProjectorMuteChange(muted); },
-  onAutoplayBlocked: function (info) { handleAutoplayBlocked(info); },
-  onError: function (code) { handleProjectorError(code); }
+  onEnded: function () { handleVideoEnded(); }
 };
-
-// YT.PlayerState values: -1 UNSTARTED, 0 ENDED, 1 PLAYING, 2 PAUSED, 3 BUFFERING, 5 CUED
-const YT_STATE = { UNSTARTED: -1, ENDED: 0, PLAYING: 1, PAUSED: 2, BUFFERING: 3, CUED: 5 };
-
-function handleProjectorStateChange(state) {
-  if (state === YT_STATE.PLAYING) {
-    isPlaying = true;
-    setBufferingPill(false);
-  } else if (state === YT_STATE.BUFFERING) {
-    // Don't flip the Play/Pause button while buffering — it's an in-between
-    // state, not a pause — just surface it via the separate live pill.
-    setBufferingPill(true);
-  } else if (state === YT_STATE.PAUSED || state === YT_STATE.CUED || state === YT_STATE.UNSTARTED) {
-    isPlaying = false;
-    setBufferingPill(false);
-  }
-  updatePlayPauseBtn();
-}
-
-function handleProjectorMuteChange(muted) {
-  isMuted = muted;
-  updateMuteBtn();
-}
-
-function handleAutoplayBlocked(info) {
-  toast((info && info.message) || 'Autoplay diblokir browser di Layar Proyektor.', true);
-}
-
-function handleProjectorError(code) {
-  isPlaying = false;
-  updatePlayPauseBtn();
-  setBufferingPill(false);
-  toast('Video gagal dimuat di Layar Proyektor (kode error YouTube: ' + code + ')', true);
-}
-
-function setBufferingPill(show) {
-  const pill = document.getElementById('playbackStatePill');
-  if (!pill) return;
-  pill.classList.toggle('hidden', !show);
-}
 
 /* ------------------------------ Playback logic ------------------------------ */
 function updatePlayPauseBtn() {
   document.getElementById('btnPlayPause').textContent = isPlaying ? '⏸ Pause' : '▶ Play';
-  updateNowPlayingBadge();
-}
-function updateNowPlayingBadge() {
-  // Targeted DOM update instead of a full list re-render: cheap, and avoids
-  // disturbing scroll position / hover state in the playlist & search lists.
-  document.querySelectorAll('.item.playing .badge-playing').forEach((el) => {
-    el.classList.toggle('paused', !isPlaying);
-    const label = el.querySelector('.badge-label');
-    if (label) label.textContent = isPlaying ? 'Sedang diputar' : 'Dijeda';
-  });
 }
 function updateMuteBtn() {
   document.getElementById('btnMute').textContent = isMuted ? '🔇 Unmute' : '🔊 Mute';

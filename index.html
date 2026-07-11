@@ -31,9 +31,13 @@
   body::before{
     content:'';
     position:fixed; inset:-40px; z-index:-2;
-    background:
+    background-image:
       linear-gradient(180deg, #0b0d12d9, #0b0d12ee),
-      url('https://raw.githubusercontent.com/LOUKA51/Youtube/refs/heads/main/1366762.webp') center/cover no-repeat;
+      url('./asset/bg.webp');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
     filter: blur(18px);
   }
 
@@ -776,6 +780,10 @@ function applySearchResults(items) {
 /* ------------------------- Projector bridge (one-way) ----------------------- */
 function buildProjectorHTML(initState) {
   const stateJSON = JSON.stringify(initState).replace(/</g, '\\u003c');
+  // Popup proyektor dibuka via window.open('', ...) + document.write, sehingga
+  // base document-nya adalah about:blank. Relative path tidak akan resolve di sana,
+  // maka path lokal dihitung menjadi absolute URL relatif terhadap halaman utama.
+  const bgAbsoluteUrl = new URL('./asset/bg.webp', window.location.href).href;
   return `<!DOCTYPE html>
 <html lang="id">
 <head>
@@ -787,7 +795,10 @@ function buildProjectorHTML(initState) {
   html,body{height:100%;background:#000;overflow:hidden;}
   body::before{
     content:'';position:fixed;inset:-60px;z-index:-2;
-    background:linear-gradient(180deg,#0b0d12d9,#0b0d12ee), url('https://raw.githubusercontent.com/LOUKA51/Youtube/refs/heads/main/1366762.webp') center/cover no-repeat;
+    background-image:linear-gradient(180deg,#0b0d12d9,#0b0d12ee), url('${bgAbsoluteUrl}');
+    background-size:cover;
+    background-position:center;
+    background-repeat:no-repeat;
     filter:blur(var(--blur-amt));
   }
   #stage{position:fixed;inset:0; background:#000; overflow:hidden;}
@@ -801,10 +812,10 @@ function buildProjectorHTML(initState) {
     height:70vh; min-height:480px; max-height:920px;
     padding:88px 120px; border-radius:38px; z-index:30;
     background:
-      radial-gradient(120% 160% at 50% 0%, rgba(255,255,255,0.08), rgba(255,255,255,0) 55%),
-      linear-gradient(150deg, rgba(28,25,36,0.72), rgba(10,10,14,0.72));
-    backdrop-filter: blur(16px) saturate(170%);
-    -webkit-backdrop-filter: blur(16px) saturate(170%);
+      radial-gradient(120% 160% at 50% 0%, rgba(255,255,255,0.10), rgba(255,255,255,0) 55%),
+      linear-gradient(150deg, rgba(38,34,48,0.62), rgba(16,16,22,0.6));
+    backdrop-filter: blur(22px) saturate(170%);
+    -webkit-backdrop-filter: blur(22px) saturate(170%);
     border: 1px solid rgba(255,255,255,0.20);
     box-shadow: 0 30px 90px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.14);
     text-align:center; font-family:'Segoe UI',sans-serif;
@@ -946,123 +957,53 @@ function buildProjectorHTML(initState) {
   var notifyAutoplayBlocked = callOperator('onAutoplayBlocked');
   var notifyPlayerError = callOperator('onError');
 
-  // ---- Reliable playback engine -------------------------------------------------
-  // Old approach: try unmuted autoplay, wait 1.4s once, and only THEN fall back
-  // to muted — and once muted, it stayed muted forever. That caused two visible
-  // problems: (1) sound often never came back after an autoplay block, and
-  // (2) if that single check ran before the video had really started (slow
-  // network, video switch, etc.) the button said "Pause" while nothing was
-  // actually playing, so the first click did nothing and users had to click
-  // twice.
-  //
-  // New approach:
-  //  - Every playback attempt starts MUTED (browsers always allow muted
-  //    autoplay, so this never gets blocked) and retries playVideo() a few
-  //    times until the real state is actually PLAYING/BUFFERING — closing the
-  //    "needs two clicks" gap.
-  //  - The instant real playback is confirmed, we apply the user's actual
-  //    sound preference: unmuted by default, muted only if the user
-  //    themselves clicked Mute. Unmuting an already-playing video is allowed
-  //    by every major browser, so sound reliably comes back on its own.
-  //  - "desiredPlaying" lets a manual Pause immediately cancel any pending
-  //    retry loop, so the retries can never fight a deliberate pause.
-  var explicitlyMuted = !!initState.muted; // user's own choice; default = sound ON
-  var desiredPlaying = false;
-  var playRetryTimer = null;
-  var playRetryCount = 0;
-
-  function clearPlayRetry(){
-    clearTimeout(playRetryTimer);
-    playRetryTimer = null;
-    playRetryCount = 0;
-  }
-
-  function applyDesiredSound(){
-    if (!ytPlayer) return;
-    if (explicitlyMuted) { ytPlayer.mute(); }
-    else { ytPlayer.unMute(); }
-    setTimeout(function(){ notifyMuteChange(ytPlayer.isMuted()); }, 150);
-  }
-
-  // Confirms playback really started, retrying playVideo() a handful of
-  // times if needed (covers the browsers that silently ignore the very
-  // first programmatic play() call right after a video swap). Bails out
-  // instantly if the user pauses while a retry is still pending.
-  function ensurePlaybackStarted(){
-    clearPlayRetry();
-    desiredPlaying = true;
-    function check(){
-      if (!ytPlayer || !desiredPlaying) return;
+  // Autoplay-block watchdog: some browsers (Chrome/Brave/Edge) silently
+  // refuse unmuted autoplay — no error event fires, the player just never
+  // reaches PLAYING. We arm a short timer after every play() attempt; if
+  // the state hasn't become PLAYING/BUFFERING by then, we retry muted
+  // (which browsers reliably allow) and tell the Operator what happened so
+  // its Mute button/pill reflect reality instead of going stale.
+  var autoplayWatchdog = null;
+  function armAutoplayWatchdog(){
+    clearTimeout(autoplayWatchdog);
+    autoplayWatchdog = setTimeout(function(){
+      if (!ytPlayer) return;
       var st = ytPlayer.getPlayerState();
-      if (st === 1 || st === 3) { // PLAYING or BUFFERING — it's really running
-        applyDesiredSound();
-        return;
+      if (st !== 1 && st !== 3) {
+        try {
+          ytPlayer.mute();
+          ytPlayer.playVideo();
+          notifyMuteChange(true);
+          notifyAutoplayBlocked({ message: 'Autoplay diblokir browser di Layar Proyektor — video diputar dalam mode Mute.' });
+        } catch (err) {}
       }
-      if (playRetryCount >= 8) {
-        notifyAutoplayBlocked({ message: 'Video tidak bisa mulai diputar otomatis di Layar Proyektor. Coba klik Play sekali lagi.' });
-        return;
-      }
-      playRetryCount++;
-      try { ytPlayer.mute(); ytPlayer.playVideo(); } catch (err) {}
-      playRetryTimer = setTimeout(check, 450);
-    }
-    playRetryTimer = setTimeout(check, 300);
+    }, 1400);
   }
 
   window.YumeProjector = {
     loadVideo: function(vid, time){
       runOrQueue(function(){
         document.getElementById('emptyHint').classList.add('hidden');
-        ytPlayer.mute(); // guarantees this load is allowed to autoplay
         ytPlayer.loadVideoById({ videoId: vid, startSeconds: time || 0 });
-        ensurePlaybackStarted();
+        // FIX: loadVideoById juga mencoba autoplay, tapi tanpa watchdog di sini
+        // kegagalan autoplay (browser block) tidak pernah terdeteksi/di-retry —
+        // video jadi "sangkut" di ikon play merah setiap ganti lagu.
+        armAutoplayWatchdog();
       });
     },
-    play: function(){ runOrQueue(function(){ ensurePlaybackStarted(); ytPlayer.playVideo(); }); },
-    pause: function(){
-      runOrQueue(function(){
-        desiredPlaying = false;
-        clearPlayRetry();
-        ytPlayer.pauseVideo();
-      });
-    },
+    play: function(){ runOrQueue(function(){ ytPlayer.playVideo(); armAutoplayWatchdog(); }); },
+    pause: function(){ runOrQueue(function(){ clearTimeout(autoplayWatchdog); ytPlayer.pauseVideo(); }); },
     setVolume: function(v){ runOrQueue(function(){ ytPlayer.setVolume(v); }); },
-    // mute()/unmute() don't just fire-and-assume: some browsers silently
-    // refuse an unmute that wasn't triggered by a direct gesture inside THIS
-    // window (a click in the Operator window doesn't count as user
-    // activation here), so ytPlayer.unMute() can appear to run but leave the
-    // player actually muted. We re-check the real state via
-    // ytPlayer.isMuted() right after and report THAT back to the Operator,
-    // so the button never gets stuck out of sync with what's really playing.
-    // Both also record the choice in "explicitlyMuted" so it's respected on
-    // every future video/play, not just the current one.
-    mute: function(){
-      explicitlyMuted = true;
-      runOrQueue(function(){
-        ytPlayer.mute();
-        setTimeout(function(){ notifyMuteChange(ytPlayer.isMuted()); }, 150);
-      });
-    },
-    unmute: function(){
-      explicitlyMuted = false;
-      runOrQueue(function(){
-        ytPlayer.unMute();
-        setTimeout(function(){ notifyMuteChange(ytPlayer.isMuted()); }, 150);
-      });
-    },
+    mute: function(){ runOrQueue(function(){ ytPlayer.mute(); notifyMuteChange(true); }); },
+    unmute: function(){ runOrQueue(function(){ ytPlayer.unMute(); notifyMuteChange(false); }); },
     showText: showText,
     hideText: hideText
   };
 
   window.onYouTubeIframeAPIReady = function () {
-
     ytPlayer = new YT.Player('ytplayer', {
       host: 'https://www.youtube.com',
-      // mute:1 here is deliberate: browsers always allow muted autoplay, so
-      // the very first load never gets silently blocked. ensurePlaybackStarted()
-      // then unmutes automatically the instant real playback is confirmed
-      // (unless the user explicitly chose Mute), so sound is back on its own.
-      playerVars: { autoplay: 1, mute: 1, controls: 0, rel: 0, modestbranding: 1 },
+      playerVars: { autoplay: 1, controls: 0, rel: 0, modestbranding: 1 },
       events: {
         onReady: function () {
           ytReady = true;
@@ -1072,18 +1013,22 @@ function buildProjectorHTML(initState) {
           if (initState.vid) {
             document.getElementById('emptyHint').classList.add('hidden');
             ytPlayer.loadVideoById({ videoId: initState.vid, startSeconds: initState.time || 0 });
-            ensurePlaybackStarted();
+            armAutoplayWatchdog();
           }
           cmdQueue.forEach(function (fn) { fn(); });
           cmdQueue = [];
         },
         onStateChange: function (e) {
+          // PLAYING or BUFFERING means autoplay clearly succeeded — disarm
+          // the watchdog so it doesn't fire a false "blocked" retry later.
+          if (e.data === YT.PlayerState.PLAYING || e.data === YT.PlayerState.BUFFERING) {
+            clearTimeout(autoplayWatchdog);
+          }
           // Report every real state (-1 UNSTARTED, 1 PLAYING, 2 PAUSED,
           // 3 BUFFERING, 5 CUED) back to the Operator so its Play/Pause
           // button and buffering pill always match what's actually on screen.
           notifyStateChange(e.data);
           if (e.data === YT.PlayerState.ENDED) {
-            clearPlayRetry();
             notifyEnded();
           }
         },
@@ -1136,8 +1081,7 @@ function openProjector() {
     vid: currentVideoId,
     time: playerState.time || 0,
     volume: playerState.volume != null ? playerState.volume : 80,
-    blur: PROJECTOR_BLUR,
-    muted: isMuted // sound is ON by default; only carried over as muted if the user explicitly chose Mute
+    blur: PROJECTOR_BLUR
   };
   projectorWin = window.open('', 'yume_projector', 'width=1280,height=720,menubar=no,toolbar=no,location=no');
   if (!projectorWin) {

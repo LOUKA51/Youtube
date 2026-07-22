@@ -1593,7 +1593,7 @@ const TIMELINE_TICK_MS = 100;          // ~10Hz update, mulus tanpa jitter
    Karena itu preview lokal boleh "dikorbankan" ke resolusi rendah untuk
    menghemat CPU/GPU/bandwidth Operator, dan Proyektor tetap mendapat
    prioritas penuh untuk sinkronisasi & kualitas. */
-const LOCAL_PREVIEW_QUALITY = 'small'; // paksa preview lokal ke ~240p (hemat decode & bandwidth)
+const LOCAL_PREVIEW_QUALITY = 'tiny'; // paksa preview lokal ke 144p (hemat decode & bandwidth) — TIDAK mengikuti panel Kualitas Video
 function enforceLocalPreviewQuality() {
   if (!localPlayer) return;
   try { localPlayer.setPlaybackQuality(LOCAL_PREVIEW_QUALITY); } catch (e) {}

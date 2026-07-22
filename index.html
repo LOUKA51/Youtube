@@ -765,7 +765,8 @@ const searchState = {
   tokens: {},                // { [duration]: nextPageToken|null }
   seenIds: new Set(),
   loading: false,
-  exhausted: false
+  exhausted: false,
+  activeApiQuery: ''         // query varian yang sedang dipakai (untuk kelanjutan scroll)
 };
 
 /* --------------------------- API status UI -------------------------------- */
@@ -1007,6 +1008,39 @@ function setViewMode(mode) {
   renderSearchList();
 }
 
+/* ------------- Search & Display Optimizer (query builder / formatter) ------------- */
+// Aturan lengkap: lihat search-optimizer-prompt.md
+function cleanDisplayTitle(rawTitle) {
+  if (!rawTitle) return '';
+  let t = rawTitle;
+  // buang tag bracket/parenthesis noise umum: (Official Video), [MV], (4K), (HD), dsb.
+  t = t.replace(/[\(\[\{]\s*(official\s*(music\s*)?video|official\s*mv|mv|official\s*audio|lyrics?\s*video|audio)\s*[\)\]\}]/gi, '');
+  t = t.replace(/[\(\[\{]\s*(4k|8k|hd|full\s*hd|high\s*quality)\s*[\)\]\}]/gi, '');
+  // buang pemisah "| Lyrics", "- Lyrics", dsb di akhir judul
+  t = t.replace(/[|\-–]\s*lyrics?\s*(video)?\s*$/gi, '');
+  // buang tag mandiri tanpa kurung: Official Video, Official MV, MV, HD, 4K di ujung judul
+  t = t.replace(/\b(official\s*(music\s*)?video|official\s*mv|official\s*audio)\b/gi, '');
+  t = t.replace(/\b(4k|8k|hd|full\s*hd)\b\s*$/gi, '');
+  // buang sisa kurung kosong akibat penghapusan di atas
+  t = t.replace(/[\(\[\{]\s*[\)\]\}]/g, '');
+  // buang emoji berlebih
+  t = t.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '');
+  // rapikan spasi & separator sisa
+  t = t.replace(/\s{2,}/g, ' ').replace(/\s*[-–|]\s*$/g, '').trim();
+  return t || rawTitle.trim();
+}
+
+function buildSearchQueries(query) {
+  // Perluasan query, urut prioritas sesuai spesifikasi:
+  // 1) official mv  2) official music video  3) official audio
+  const q = query.trim();
+  return [
+    `${q} official mv`,
+    `${q} official music video`,
+    `${q} official audio`
+  ];
+}
+
 function getDurationsForFilter() {
   // Fokus pada Music (videoCategoryId=10) dan hindari YouTube Shorts dengan hanya
   // mengambil durasi "medium" (4-20 mnt) dan "long" (>20 mnt) — Shorts selalu
@@ -1038,23 +1072,43 @@ async function runSearch(query, isNewSearch = true) {
   renderSearchList();
 
   try {
-    const musicQuery = `${query} official music video`;
-    const requests = durations
-      .filter(dur => isNewSearch || searchState.tokens[dur])
-      .map(dur => {
-        const pageToken = isNewSearch ? '' : (searchState.tokens[dur] || '');
-        const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&videoCategoryId=10&videoDuration=${dur}&order=${searchState.order}&maxResults=25&q=${encodeURIComponent(musicQuery)}${pageToken ? `&pageToken=${pageToken}` : ''}&key=${apiKey}`;
-        return fetch(url).then(res => res.json().then(data => ({ res, data, dur })));
-      });
+    // Kelanjutan scroll harus memakai varian query yang sama dengan pencarian awal.
+    // Pencarian baru mencoba varian sesuai prioritas, fallback ke varian berikutnya
+    // bila varian sebelumnya tidak menghasilkan apa pun.
+    const candidateQueries = isNewSearch ? buildSearchQueries(query) : [searchState.activeApiQuery];
 
-    if (requests.length === 0) {
+    async function fetchWithQuery(musicQuery) {
+      const requests = durations
+        .filter(dur => isNewSearch || searchState.tokens[dur])
+        .map(dur => {
+          const pageToken = isNewSearch ? '' : (searchState.tokens[dur] || '');
+          const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&videoCategoryId=10&videoDuration=${dur}&order=${searchState.order}&maxResults=25&q=${encodeURIComponent(musicQuery)}${pageToken ? `&pageToken=${pageToken}` : ''}&key=${apiKey}`;
+          return fetch(url).then(res => res.json().then(data => ({ res, data, dur })));
+        });
+      if (requests.length === 0) return null;
+      return Promise.all(requests);
+    }
+
+    let results = null;
+    let chosenQuery = candidateQueries[0];
+    for (const candidate of candidateQueries) {
+      const attempt = await fetchWithQuery(candidate);
+      if (!attempt) { results = null; chosenQuery = candidate; break; }
+      const hasItems = attempt.some(({ data }) => (data.items || []).length > 0);
+      if (hasItems || candidate === candidateQueries[candidateQueries.length - 1]) {
+        results = attempt;
+        chosenQuery = candidate;
+        break;
+      }
+    }
+    searchState.activeApiQuery = chosenQuery;
+
+    if (!results) {
       searchState.exhausted = true;
       searchState.loading = false;
       renderSearchList();
       return;
     }
-
-    const results = await Promise.all(requests);
 
     const items = [];
     for (const { res, data, dur } of results) {
@@ -1067,7 +1121,7 @@ async function runSearch(query, isNewSearch = true) {
         searchState.seenIds.add(id);
         items.push({
           id,
-          title: it.snippet.title,
+          title: cleanDisplayTitle(it.snippet.title),
           channel: it.snippet.channelTitle,
           thumb: it.snippet.thumbnails?.medium?.url || it.snippet.thumbnails?.default?.url || ''
         });

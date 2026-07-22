@@ -116,53 +116,41 @@
     .app{ grid-template-columns:1fr; }
   }
 
-  /* ===== LEFT: OPERATOR CONTROL COL (Live Preview Player) ===== */
+  /* ===== LEFT: OPERATOR CONTROL COL ===== */
   .player-col{ display:flex; flex-direction:column; gap:16px; }
-  .nowplaying{ padding:14px; display:flex; flex-direction:column; gap:12px; }
+  .nowplaying{ padding:14px; display:flex; flex-direction:column; gap:8px; }
 
-  /* Live Preview: aspect 16:9, minimal 240px height, tidak diblok pointer-events */
-  .now-preview{
-    position:relative; width:100%;
-    aspect-ratio:16/9; min-height:240px;
-    border-radius:12px; overflow:hidden;
-    background:#0f1319; border:1px solid #91C4C355;
-    box-shadow: inset 0 0 0 1px #0000, 0 6px 24px rgba(0,0,0,0.35);
+  /* Now Playing: info bar (tanpa preview iframe — hemat quota & CPU) */
+  .np-bar{
+    display:flex; align-items:center; gap:12px;
+    padding:12px 14px; border-radius:12px;
+    background:var(--card-bg); border:1px solid #91C4C333;
   }
-  .now-preview #localYt,
-  .now-preview iframe{
-    position:absolute; inset:0;
-    width:100%; height:100%;
-    border:0; display:block;
+  .np-thumb{
+    width:72px; aspect-ratio:16/9; border-radius:8px;
+    object-fit:cover; background:#1a1e26; flex-shrink:0;
+    border:1px solid #91C4C333;
   }
-  .now-preview .preview-badge{
-    position:absolute; top:8px; left:10px; z-index:2;
-    padding:3px 9px; border-radius:999px; pointer-events:none;
-    background:#0b0d12b3; color:var(--text); font-size:.68rem; font-weight:700;
-    letter-spacing:.6px; border:1px solid #91C4C355;
-    display:flex; align-items:center; gap:6px;
-    backdrop-filter: blur(6px);
-  }
-  .now-preview .preview-badge .dot{
-    width:7px; height:7px; border-radius:50%;
-    background:var(--danger); box-shadow:0 0 6px var(--danger);
-  }
-  .now-preview.is-live .preview-badge .dot{
-    background:var(--accent); box-shadow:0 0 6px var(--accent);
-    animation:pulse 1.4s ease-in-out infinite;
-  }
-  .now-preview .preview-empty{
-    position:absolute; inset:0; z-index:1;
+  .np-thumb-empty{
+    width:72px; aspect-ratio:16/9; border-radius:8px;
+    background:linear-gradient(135deg,#12161e,#1a1e26);
     display:flex; align-items:center; justify-content:center;
-    color:var(--text-dim); font-size:.9rem; text-align:center; padding:20px;
-    background:linear-gradient(180deg,#12161e,#0b0d12);
-    pointer-events:none;
+    font-size:1.4rem; opacity:.5; flex-shrink:0;
+    border:1px solid #91C4C322;
   }
-  .now-preview.has-video .preview-empty{ display:none; }
-
-  .nowplaying .np-info{ min-width:0; }
-  .nowplaying h2{ font-size:1.05rem; font-weight:700; line-height:1.35; margin-bottom:4px; text-shadow:0 2px 10px rgba(0,0,0,0.5); }
-  .nowplaying .channel{ color:var(--text-dim); font-size:.85rem; }
+  .np-info{ flex:1; min-width:0; }
+  .nowplaying h2{ font-size:1rem; font-weight:700; line-height:1.35; margin-bottom:3px; text-shadow:0 2px 10px rgba(0,0,0,0.5); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .nowplaying .channel{ color:var(--text-dim); font-size:.82rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .nowplaying .np-empty{ color:var(--text-dim); font-size:.85rem; }
+  .np-live-badge{
+    display:none; align-items:center; gap:5px;
+    font-size:.65rem; font-weight:700; letter-spacing:.5px;
+    color:var(--accent); padding:3px 8px; border-radius:999px;
+    border:1px solid #80A1BA55; background:#80A1BA14;
+    white-space:nowrap; flex-shrink:0;
+  }
+  .np-live-badge.visible{ display:flex; }
+  .np-live-badge .dot{ width:6px; height:6px; border-radius:50%; background:var(--accent); box-shadow:0 0 6px var(--accent); animation:pulse 1.4s ease-in-out infinite; }
 
   /* ===== Timeline Bar (real-time seekbar) ===== */
   .timeline-row{
@@ -333,8 +321,8 @@
 
   /* Box Hasil Pencarian: satu box berisi input pencarian + filter/sort + hasil */
   .search-panel .list{ max-height:64vh; }
-  /* Box Playlist diperbesar */
-  #playlistList{ max-height:60vh; }
+  /* Box Playlist diperbesar — menggantikan ruang preview yang dihilangkan */
+  #playlistList{ max-height:72vh; }
 
   /* ===== Kontrol Filter / Sort / View Toggle (di dalam box Hasil Pencarian) ===== */
   .search-box{ position:relative; }
@@ -492,14 +480,17 @@
   <!-- LEFT: OPERATOR CONTROL -->
   <div class="player-col">
     <div class="glass nowplaying">
-      <div class="now-preview" id="nowPreview">
-        <div class="preview-badge"><span class="dot"></span> PREVIEW · MUTED</div>
-        <div class="preview-empty" id="nowEmpty">🎬 Belum ada video dipilih. Cari &amp; klik video untuk mulai memutar.</div>
-        <div id="localYt"></div>
-      </div>
-      <div class="np-info hidden" id="nowInfo">
-        <h2 id="nowTitle">—</h2>
-        <div class="channel" id="nowChannel">—</div>
+      <div class="np-bar">
+        <img class="np-thumb hidden" id="npThumb" alt="" onerror="this.classList.add('hidden');document.getElementById('npThumbEmpty').classList.remove('hidden');">
+        <div class="np-thumb-empty" id="npThumbEmpty">🎬</div>
+        <div class="np-info">
+          <div id="nowEmpty" class="np-empty">Belum ada video dipilih — cari &amp; klik video untuk mulai.</div>
+          <div class="hidden" id="nowInfo">
+            <h2 id="nowTitle">—</h2>
+            <div class="channel" id="nowChannel">—</div>
+          </div>
+        </div>
+        <div class="np-live-badge" id="npLiveBadge"><span class="dot"></span> LIVE</div>
       </div>
     </div>
 
@@ -631,9 +622,6 @@
 <footer>Yume Player — pemutar YouTube personal · dibuat untuk penggunaan pribadi</footer>
 
 <div id="toastWrap" class="toast-wrap"></div>
-
-<!-- YouTube Iframe API untuk Local Preview Player di Operator -->
-<script src="https://www.youtube.com/iframe_api"></script>
 
 <!-- SETTINGS MODAL -->
 <div class="modal-overlay hidden" id="settingsModal">
@@ -1413,6 +1401,20 @@ function buildProjectorHTML(initState) {
           }
           cmdQueue.forEach(function (fn) { fn(); });
           cmdQueue = [];
+          // Laporkan posisi & durasi ke Operator setiap 250ms untuk update seekbar.
+          // Hanya saat video playing (state 1) agar hemat CPU saat pause/idle.
+          setInterval(function () {
+            try {
+              if (!ytPlayer || !ytReady) return;
+              var state = ytPlayer.getPlayerState();
+              if (state !== 1 && state !== 2) return; // 1=playing, 2=paused (saat pause tetap update sekali)
+              var cur = ytPlayer.getCurrentTime() || 0;
+              var dur = ytPlayer.getDuration() || 0;
+              if (window.opener && window.opener.YumeOperatorCallback) {
+                window.opener.YumeOperatorCallback.onTick(cur, dur);
+              }
+            } catch (e) {}
+          }, 250);
         },
         onStateChange: function (e) {
           if (e.data === YT.PlayerState.ENDED) {
@@ -1422,6 +1424,12 @@ function buildProjectorHTML(initState) {
               }
             } catch (err) {}
           }
+          // Laporkan state ke Operator untuk update live badge
+          try {
+            if (window.opener && window.opener.YumeOperatorCallback) {
+              window.opener.YumeOperatorCallback.onStateChange(e.data);
+            }
+          } catch (err) {}
           // Laporkan daftar resolusi yang tersedia untuk video yang sedang
           // dimuat, supaya dropdown Kualitas Video di Operator selalu terkini.
           try {
@@ -1554,59 +1562,39 @@ function sendToProjector(action, payload) {
 
 // One necessary exception to the strict one-way flow: the Projector calls this
 // back directly (via window.opener) purely to signal "video ended", laporan FPS,
-// dan status kualitas video — semuanya searah dari Proyektor ke Operator saja
+// status kualitas, dan tick timeline — semuanya searah dari Proyektor ke Operator
 // (Operator tidak pernah membaca state internal Proyektor secara langsung).
 window.YumeOperatorCallback = {
   onEnded: function () { handleVideoEnded(); },
   onFps: function (fps) { recordFpsSample(fps); },
   onQualityLevels: function (levels) { populateQualityOptions(levels); },
-  onQualityChange: function (q) { updateQualityActiveBadge(q); }
+  onQualityChange: function (q) { updateQualityActiveBadge(q); },
+  // Proyektor melaporkan posisi & durasi saat ini setiap ~250ms.
+  // Operator pakai ini untuk update seekbar & label waktu tanpa perlu local player.
+  onTick: function (cur, dur) { applyTimelineTick(cur, dur); },
+  // Proyektor melaporkan state play/pause/buffering supaya live badge akurat.
+  onStateChange: function (state) {
+    const badge = document.getElementById('npLiveBadge');
+    if (state === 1) badge.classList.add('visible');    // playing
+    else if (state === 2 || state === 0) badge.classList.remove('visible'); // paused/ended
+  }
 };
 
 /* =========================================================================
-   LOCAL PREVIEW PLAYER + TIMELINE BAR (Two-way sync)
+   TIMELINE & PLAYBACK STATE (tanpa Local Preview Player)
    -------------------------------------------------------------------------
-   - Local preview di Operator adalah YT.Player kedua yang cerminkan Projector.
-   - Selalu MUTE permanen: Projector jadi output audio utama, mencegah echo.
-   - Sinkronisasi dua arah:
-       Operator command  -> broadcast() mengirim ke keduanya (local + projector)
-       User klik iframe  -> local onStateChange -> forward ke projector
-   - Loop guard: `suppressLocalEchoUntil` (timestamp). Setiap kali Operator
-     kirim command programatis ke local player, tandai window ~350ms. Selama
-     window itu, event dari local player DIABAIKAN (itu echo perintah kita
-     sendiri, bukan interaksi user). Setelah window habis, event = interaksi
-     user langsung dan HARUS diteruskan ke Projector.
-   - Timeline: poll getCurrentTime/getDuration lewat rAF, throttle ke ~100ms
-     untuk hemat CPU. Saat user drag, polling di-pause; saat lepas, seek ke
-     kedua player lalu resume polling.
+   Preview iframe dihilangkan untuk hemat quota API YouTube dan beban CPU/GPU.
+   Timeline sekarang di-poll via YumeOperatorCallback.onTick() — Proyektor
+   melaporkan getCurrentTime/getDuration setiap ~250ms ke Operator lewat
+   window.opener (jalur yang sama dengan laporan FPS & quality).
+   Operator tidak lagi memerlukan YT Iframe API di window-nya sendiri.
    ========================================================================= */
 
-const LOCAL_ECHO_WINDOW_MS = 350;      // durasi supresi echo pasca command
-const SEEK_JUMP_THRESHOLD_S = 1.5;     // ambang deteksi seek langsung di iframe
-const TIMELINE_TICK_MS = 100;          // ~10Hz update, mulus tanpa jitter
+const TIMELINE_TICK_MS = 250;          // throttle dari Proyektor; cukup halus tanpa boros
 
-/* --- Optimisasi Beban Operator ---
-   Local Preview di panel Operator SELALU muted dan hanya berfungsi sebagai
-   monitor visual kecil bagi Operator — kualitas gambarnya TIDAK memengaruhi
-   apa yang ditonton audiens (itu tugas Layar Proyektor, yang kualitasnya
-   diatur terpisah lewat `selectedQuality` / panel Kualitas Video).
-   Karena itu preview lokal boleh "dikorbankan" ke resolusi rendah untuk
-   menghemat CPU/GPU/bandwidth Operator, dan Proyektor tetap mendapat
-   prioritas penuh untuk sinkronisasi & kualitas. */
-const LOCAL_PREVIEW_QUALITY = 'tiny'; // paksa preview lokal ke 144p (hemat decode & bandwidth) — TIDAK mengikuti panel Kualitas Video
-function enforceLocalPreviewQuality() {
-  if (!localPlayer) return;
-  try { localPlayer.setPlaybackQuality(LOCAL_PREVIEW_QUALITY); } catch (e) {}
-}
-
-let localPlayer = null;
-let localPlayerReady = false;
-let localPlayerCmdQueue = [];
-let suppressLocalEchoUntil = 0;
-let lastKnownLocalTime = 0;
 let currentDuration = 0;
+let lastKnownLocalTime = 0;
 let isTimelineDragging = false;
-let lastTimelineFrame = 0;
 
 /* --- Time formatting: MM:SS atau HH:MM:SS untuk video > 1 jam --- */
 function formatTime(sec) {
@@ -1619,137 +1607,33 @@ function formatTime(sec) {
   return h > 0 ? `${pad(h)}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
 }
 
-/* --- Wrapper: jalankan fn di local player kalau siap, else antre --- */
-function runOnLocal(fn) {
-  if (localPlayerReady && localPlayer) {
-    try { fn(); } catch (err) { console.error('Local player command error', err); }
-  } else {
-    localPlayerCmdQueue.push(fn);
-  }
-}
-function markLocalEchoSuppressed() {
-  suppressLocalEchoUntil = performance.now() + LOCAL_ECHO_WINDOW_MS;
+function updateTimelineTimeLabel(cur, dur) {
+  document.getElementById('timelineTime').innerHTML =
+    `<span class="cur">${formatTime(cur)}</span> / ${formatTime(dur)}`;
 }
 
-/* --- Inisialisasi Local Preview Player ketika YT API siap ---
-   YT API dipanggil global lewat window.onYouTubeIframeAPIReady. Karena Projector
-   juga mendefinisikan handler ini di window-nya sendiri (bukan window Operator),
-   tidak ada bentrok. */
-window.onYouTubeIframeAPIReady = function () {
-  try {
-    localPlayer = new YT.Player('localYt', {
-      host: 'https://www.youtube.com',
-      width: '100%', height: '100%',
-      playerVars: {
-        autoplay: 0,
-        controls: 1,       // biarkan operator klik langsung di preview
-        rel: 0,
-        modestbranding: 1,
-        playsinline: 1,
-        iv_load_policy: 3, // sembunyikan annotasi
-        disablekb: 1       // hotkey ditangani Operator secara global
-      },
-      events: {
-        onReady: function () {
-          localPlayerReady = true;
-          try { localPlayer.mute(); } catch (e) {}                // LOCAL SELALU MUTE
-          try { localPlayer.setVolume(0); } catch (e) {}
-          enforceLocalPreviewQuality();                            // hemat CPU/GPU: preview lokal dipaksa resolusi rendah
-          // Kalau ada video terakhir tersimpan, cue supaya thumbnail-nya tampil
-          if (currentVideoId) {
-            markLocalEchoSuppressed();
-            try {
-              localPlayer.cueVideoById({ videoId: currentVideoId, startSeconds: playerState.time || 0 });
-              document.getElementById('nowPreview').classList.add('has-video');
-            } catch (e) {}
-          }
-          // Jalankan antrean perintah yang datang sebelum player siap
-          localPlayerCmdQueue.forEach(function (fn) { try { fn(); } catch (e) {} });
-          localPlayerCmdQueue = [];
-        },
-        onStateChange: function (e) { handleLocalStateChange(e); },
-        onError: function (e) { console.warn('Local preview error', e.data); }
-      }
-    });
-  } catch (err) {
-    console.error('Gagal inisialisasi Local Preview Player', err);
+/* Dipanggil dari YumeOperatorCallback.onTick (laporan dari Proyektor) */
+function applyTimelineTick(cur, dur) {
+  if (isTimelineDragging) return;
+  lastKnownLocalTime = cur;
+  if (dur > 0 && Math.abs(dur - currentDuration) > 0.5) {
+    currentDuration = dur;
+    const inp = document.getElementById('timelineInput');
+    inp.max = String(Math.floor(dur));
+    inp.disabled = false;
   }
-};
-
-/* --- Handle state change dari LOCAL preview.
-   Jika event terjadi DI DALAM echo window -> abaikan (itu echo perintah kita).
-   Jika DI LUAR -> operator berinteraksi langsung di iframe, forward ke Projector. */
-function handleLocalStateChange(e) {
-  const now = performance.now();
-  const inEchoWindow = now < suppressLocalEchoUntil;
-  const state = e.data; // -1 unstarted, 0 ended, 1 playing, 2 paused, 3 buffering, 5 cued
-
-  // Update UI badge live dot berdasarkan state
-  const preview = document.getElementById('nowPreview');
-  if (state === 1) preview.classList.add('is-live');
-  else if (state === 2 || state === 0) preview.classList.remove('is-live');
-
-  // Update durasi begitu tersedia (buffering/playing pertama kali)
-  if (state === 1 || state === 3) {
-    if (state === 3) enforceLocalPreviewQuality(); // buffering = titik paling aman utk paksa ulang kualitas rendah
-    try {
-      const d = localPlayer.getDuration();
-      if (d && d > 0) {
-        currentDuration = d;
-        const inp = document.getElementById('timelineInput');
-        inp.disabled = false;
-        inp.max = String(Math.floor(d));
-        updateTimelineTimeLabel(lastKnownLocalTime, d);
-      }
-    } catch (err) {}
-  }
-
-  if (inEchoWindow) return; // echo dari command Operator sendiri — jangan forward
-
-  // User langsung berinteraksi dengan iframe preview -> cerminkan ke Projector
-  if (state === 1) {         // playing
-    if (!isPlaying) {
-      isPlaying = true;
-      updatePlayPauseBtn();
-    }
-    sendToProjector('play');
-    // Selaraskan waktu Projector supaya tidak drift setelah user pause/scrub di preview
-    try {
-      const t = localPlayer.getCurrentTime();
-      if (typeof t === 'number' && projectorWin && !projectorWin.closed && projectorWin.YumeProjector) {
-        // seekTo pakai loadVideoById-time bila projector belum punya video sama
-        // Cukup pakai jalur seek generik di sini agar hemat: forward waktu.
-        // (YT Player Projector otomatis akan resync via play.)
-      }
-    } catch (err) {}
-  } else if (state === 2) {  // paused
-    if (isPlaying) {
-      isPlaying = false;
-      updatePlayPauseBtn();
-    }
-    sendToProjector('pause');
-  } else if (state === 0) {  // ended
-    // Biarkan handleVideoEnded jalur normal (dari Projector). Local jangan
-    // memicu next dua kali; ini fallback saja jika Projector belum callback.
-    // Cek: kalau kita punya listener onEnded dari Projector, aman skip.
+  if (currentDuration > 0) {
+    const pct = Math.max(0, Math.min(100, (cur / currentDuration) * 100));
+    document.getElementById('timelineProgress').style.width = pct.toFixed(2) + '%';
+    document.getElementById('timelineInput').value = String(Math.floor(cur));
+    updateTimelineTimeLabel(cur, currentDuration);
   }
 }
 
-/* --- Broadcast helpers: kirim ke KEDUA player secara sinkron.
-   Semua entry point yang mengubah state playback WAJIB lewat sini agar
-   kedua player tetap sinkron dan echo-window ter-arm dengan benar. */
+/* --- Broadcast helpers: semua playback commands hanya ke Projector --- */
 function broadcastLoad(vid, startSeconds) {
-  markLocalEchoSuppressed();
-  runOnLocal(function () {
-    // loadVideoById -> autoplay; pakai cueVideoById kalau tidak ingin autoplay
-    localPlayer.loadVideoById({ videoId: vid, startSeconds: startSeconds || 0 });
-    // Local wajib mute setiap kali load ulang (YT kadang unmute internal)
-    try { localPlayer.mute(); localPlayer.setVolume(0); } catch (e) {}
-    enforceLocalPreviewQuality();
-  });
   sendToProjector('loadVideo', { vid, time: startSeconds || 0 });
-
-  // Reset timeline UI segera; nilai baru akan menyusul lewat polling
+  // Reset timeline UI segera; nilai baru menyusul via onTick dari Proyektor
   currentDuration = 0;
   lastKnownLocalTime = startSeconds || 0;
   const inp = document.getElementById('timelineInput');
@@ -1757,85 +1641,10 @@ function broadcastLoad(vid, startSeconds) {
   inp.max = '1000'; inp.disabled = true;
   document.getElementById('timelineProgress').style.width = '0%';
   updateTimelineTimeLabel(startSeconds || 0, 0);
-  document.getElementById('nowPreview').classList.add('has-video');
 }
-function broadcastPlay() {
-  markLocalEchoSuppressed();
-  runOnLocal(function () { localPlayer.playVideo(); });
-  sendToProjector('play');
-}
-function broadcastPause() {
-  markLocalEchoSuppressed();
-  runOnLocal(function () { localPlayer.pauseVideo(); });
-  sendToProjector('pause');
-}
-function broadcastSeek(seconds) {
-  markLocalEchoSuppressed();
-  runOnLocal(function () { localPlayer.seekTo(seconds, true); });
-  // Projector belum punya action 'seek' — kita perluas bridge di bawah.
-  sendToProjector('seek', { seconds });
-}
-
-/* --- Hemat CPU/GPU saat tab Operator tidak dilihat.
-   Layar Proyektor punya YT.Player SENDIRI di window terpisah (lihat sekitar
-   baris ~1338), jadi men-pause decode video preview lokal di sini TIDAK
-   memengaruhi playback/sinkronisasi Proyektor sama sekali — hanya preview
-   kecil milik Operator yang berhenti mendekode saat tidak terlihat. */
-document.addEventListener('visibilitychange', () => {
-  if (!localPlayerReady || !localPlayer) return;
-  markLocalEchoSuppressed(); // cegah pause/resume ini ikut ter-forward ke Projector
-  if (document.hidden) {
-    try { localPlayer.pauseVideo(); } catch (e) {}
-  } else {
-    enforceLocalPreviewQuality();
-    if (isPlaying) { try { localPlayer.playVideo(); } catch (e) {} }
-  }
-});
-
-/* --- Timeline update loop: rAF + throttle 100ms.
-   Dipause otomatis saat user drag (isTimelineDragging=true) dan saat local
-   player tidak sedang playing. */
-function timelineTick(now) {
-  requestAnimationFrame(timelineTick);
-  if (isTimelineDragging) return;
-  if (!localPlayerReady || !localPlayer) return;
-  if (now - lastTimelineFrame < TIMELINE_TICK_MS) return;
-  lastTimelineFrame = now;
-
-  let cur = 0, dur = currentDuration;
-  try {
-    cur = localPlayer.getCurrentTime() || 0;
-    const d = localPlayer.getDuration() || 0;
-    if (d > 0 && Math.abs(d - dur) > 0.5) {
-      dur = d; currentDuration = d;
-      const inp = document.getElementById('timelineInput');
-      inp.max = String(Math.floor(d));
-      inp.disabled = false;
-    }
-  } catch (err) { return; }
-
-  // Deteksi seek langsung di iframe: loncatan besar dalam satu tick.
-  // Kalau |cur - lastKnownLocalTime| > threshold DAN kita di luar echo window
-  // -> user seek di iframe local, forward ke Projector.
-  const delta = Math.abs(cur - lastKnownLocalTime);
-  const isNaturalStep = delta < SEEK_JUMP_THRESHOLD_S;
-  if (!isNaturalStep && performance.now() >= suppressLocalEchoUntil) {
-    sendToProjector('seek', { seconds: cur });
-  }
-  lastKnownLocalTime = cur;
-
-  if (dur > 0) {
-    const pct = Math.max(0, Math.min(100, (cur / dur) * 100));
-    document.getElementById('timelineProgress').style.width = pct.toFixed(2) + '%';
-    document.getElementById('timelineInput').value = String(Math.floor(cur));
-    updateTimelineTimeLabel(cur, dur);
-  }
-}
-function updateTimelineTimeLabel(cur, dur) {
-  document.getElementById('timelineTime').innerHTML =
-    `<span class="cur">${formatTime(cur)}</span> / ${formatTime(dur)}`;
-}
-requestAnimationFrame(timelineTick);
+function broadcastPlay() { sendToProjector('play'); }
+function broadcastPause() { sendToProjector('pause'); }
+function broadcastSeek(seconds) { sendToProjector('seek', { seconds }); }
 
 /* --- Timeline input events: input=drag, change=lepas ---
    Saat drag: hentikan polling (isTimelineDragging=true) & update label preview.
@@ -1970,22 +1779,28 @@ function loadVideoIntoPlayer(vid, startSeconds = 0, autoplay = true) {
   currentVideoId = vid;
   const v = videos[vid];
   if (v) {
-    document.getElementById('nowEmpty').style.display = 'none';
+    document.getElementById('nowEmpty').classList.add('hidden');
     document.getElementById('nowInfo').classList.remove('hidden');
     document.getElementById('nowTitle').textContent = v.title;
     document.getElementById('nowChannel').textContent = v.channel;
-    document.getElementById('nowPreview').classList.add('has-video');
+    // Tampilkan thumbnail video dari data yang sudah tersimpan (tanpa API call baru)
+    const thumb = document.getElementById('npThumb');
+    const thumbEmpty = document.getElementById('npThumbEmpty');
+    if (v.thumb) {
+      thumb.src = v.thumb;
+      thumb.classList.remove('hidden');
+      thumbEmpty.classList.add('hidden');
+    } else {
+      thumb.classList.add('hidden');
+      thumbEmpty.classList.remove('hidden');
+    }
   }
   playerState.videoId = vid;
   playerState.time = startSeconds;
   Store.set(STORAGE_KEYS.PLAYER_STATE, playerState);
-  // broadcastLoad mengirim ke KEDUANYA (local preview + projector) sekaligus,
-  // sekaligus mengarming echo-window supaya state change berikutnya di local
-  // player tidak salah dianggap sebagai interaksi user.
   broadcastLoad(vid, startSeconds);
   // Jika Operator sedang memakai kualitas manual (bukan Auto), terapkan ulang
-  // setelah video baru selesai dimuat oleh Projector. Local preview selalu
-  // Auto — tidak diikutsertakan agar tidak boros bandwidth ganda.
+  // setelah video baru selesai dimuat oleh Projector.
   if (selectedQuality !== 'auto') {
     setTimeout(() => sendToProjector('quality', { level: selectedQuality }), 1200);
   }
@@ -2242,13 +2057,16 @@ function init() {
   renderSearchList();
   if (currentVideoId && videos[currentVideoId]) {
     const v = videos[currentVideoId];
-    document.getElementById('nowEmpty').style.display = 'none';
+    document.getElementById('nowEmpty').classList.add('hidden');
     document.getElementById('nowInfo').classList.remove('hidden');
     document.getElementById('nowTitle').textContent = v.title;
     document.getElementById('nowChannel').textContent = v.channel;
-    document.getElementById('nowPreview').classList.add('has-video');
-    // Local preview player mungkin belum siap saat init(); onReady di local
-    // player akan otomatis cue video terakhir (currentVideoId) begitu ready.
+    if (v.thumb) {
+      const thumb = document.getElementById('npThumb');
+      thumb.src = v.thumb;
+      thumb.classList.remove('hidden');
+      document.getElementById('npThumbEmpty').classList.add('hidden');
+    }
   }
   if (!apiKey) {
     setTimeout(() => { settingsModal.classList.remove('hidden'); }, 400);

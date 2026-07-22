@@ -262,15 +262,25 @@
   .list.grid-view{
     display:grid;
     grid-template-columns:repeat(auto-fill, minmax(190px, 1fr));
+    grid-auto-rows:min-content;
     gap:14px;
     align-content:start;
+    align-items:start;
   }
   .list.grid-view .item{
     flex-direction:column; align-items:stretch; padding:0; overflow:hidden;
     background:var(--card-bg); border:1px solid transparent;
+    align-self:start; height:auto;
   }
-  .list.grid-view .item img{ width:100%; aspect-ratio:16/9; border-radius:12px 12px 0 0; }
-  .list.grid-view .item .info{ padding:8px 10px 10px; gap:4px; }
+  .list.grid-view .item img{ width:100%; aspect-ratio:16/9; border-radius:12px 12px 0 0; display:block; }
+  .list.grid-view .item .info{
+    padding:8px 10px 10px; gap:4px;
+    flex:none; align-items:flex-start; justify-content:flex-start;
+  }
+  .list.grid-view .item .title{
+    min-height:calc(1.3em * 2); width:100%;
+  }
+  .list.grid-view .item .sub{ width:100%; }
   .list.grid-view .item .item-actions{
     flex-direction:row; position:absolute; top:8px; right:8px;
     background:#0b0d12b3; border-radius:8px; padding:2px;
@@ -671,7 +681,7 @@ function videoItemHTML(vid, { showPlaylistActions, showSearchActions, inPlaylist
     <div class="item ${playing ? 'playing' : ''}" data-vid="${vid}" data-playlist="${inPlaylistId || ''}">
       <img src="${thumbSrc}" alt="" loading="lazy" onerror="this.onerror=null;this.src='${FALLBACK_THUMB}';">
       <div class="info">
-        <div class="title">${escapeHTML(v.title)}</div>
+        <div class="title" title="${escapeHTML(v.title)}">${escapeHTML(v.title)}</div>
         <div class="sub">${escapeHTML(v.channel)}</div>
         ${playing ? `<div class="badge-playing"><span class="bar"></span><span class="bar"></span><span class="bar"></span> Sedang diputar</div>` : ''}
       </div>

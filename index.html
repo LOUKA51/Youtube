@@ -342,6 +342,25 @@
   }
   .search-controls select option{ background:#1a1e26; color:var(--text); }
   .search-controls label{ font-size:.72rem; color:var(--text-dim); display:flex; align-items:center; gap:6px; }
+  /* Toggle Switch: Import Seluruh Playlist */
+  .switch-field{ display:flex; align-items:center; gap:8px; font-size:.72rem; color:var(--text-dim); cursor:pointer; user-select:none; }
+  .switch-field input{ position:absolute; opacity:0; width:0; height:0; }
+  .switch-track{
+    position:relative; width:38px; height:20px; flex-shrink:0; border-radius:999px;
+    background:#FFF7DD12; border:1px solid #91C4C333;
+    transition: background .18s ease, border-color .18s ease;
+  }
+  .switch-track::after{
+    content:''; position:absolute; top:2px; left:2px; width:14px; height:14px; border-radius:50%;
+    background:var(--text-dim); will-change: transform;
+    transition: transform .18s cubic-bezier(.4,0,.2,1), background .18s ease;
+  }
+  .switch-field input:focus-visible + .switch-track{ box-shadow:0 0 0 3px #80A1BA33; }
+  .switch-field input:checked + .switch-track{ background:#80A1BA55; border-color:var(--border); }
+  .switch-field input:checked + .switch-track::after{ transform:translateX(18px); background:var(--success); }
+  .switch-field input:checked ~ .switch-label{ color:var(--text); }
+  @media (prefers-reduced-motion: reduce){ .switch-track, .switch-track::after{ transition:none; } }
+
   .view-toggle{ display:flex; gap:4px; margin-left:auto; }
   .view-toggle button{
     width:32px; height:32px; border-radius:9px; background:#FFF7DD12; border:1px solid #91C4C333;
@@ -563,6 +582,11 @@
             <option value="long">Panjang (&gt;20 mnt)</option>
           </select>
         </label>
+        <label class="switch-field" title="Jika aktif, link playlist YouTube akan diimpor seluruh isinya menjadi playlist baru">
+          <input type="checkbox" id="chkImportPlaylist">
+          <span class="switch-track"></span>
+          <span class="switch-label">Import Seluruh Playlist</span>
+        </label>
         <div class="view-toggle">
           <button type="button" id="btnViewList" class="active" title="Tampilan List">☰</button>
           <button type="button" id="btnViewGrid" title="Tampilan Grid">▦</button>
@@ -662,6 +686,7 @@
       <div class="kb-row"><span class="kb-key">←</span><span class="kb-desc">Kembali ke video sebelumnya (Previous)</span></div>
       <div class="kb-row"><span class="kb-key">M</span><span class="kb-desc">Toggle Mute / Unmute suara</span></div>
       <div class="kb-row"><span class="kb-key">C</span><span class="kb-desc">Aktifkan / nonaktifkan Subtitle (Closed Caption)</span></div>
+      <div class="kb-row"><span class="kb-key">Ctrl + Q</span><span class="kb-desc">Fokus ke kolom pencarian &amp; sorot teks lama (Cmd + Q di macOS)</span></div>
     </div>
     <div class="modal-actions">
       <button class="btn primary" id="btnCloseKeybind">Tutup</button>
@@ -688,7 +713,8 @@ const STORAGE_KEYS = {
   // API key is intentionally NOT persisted — session-only, in-memory variable.
 };
 const SEARCH_CACHE_TTL = 1000 * 60 * 10; // 10 minutes
-const DEBOUNCE_MS = 550;
+const DEBOUNCE_MS = 800;
+const PLAYLIST_IMPORT_MAX_PAGES = 5; // 5 x 50 = maks 250 video per impor (5 unit kuota)
 const FALLBACK_THUMB = 'https://raw.githubusercontent.com/LOUKA51/Youtube/refs/heads/main/Thumbnail.webp';
 const PROJECTOR_BLUR = 20; // locked permanently — no operator-facing slider anymore
 
@@ -750,11 +776,14 @@ const searchState = {
   order: 'relevance',        // relevance | date | viewCount | title
   durationFilter: 'all',     // all | medium | long
   viewMode: 'list',          // list | grid
-  tokens: {},                // { [duration]: nextPageToken|null }
+  nextToken: null,           // nextPageToken tunggal (satu bucket = satu request)
   seenIds: new Set(),
   loading: false,
   exhausted: false,
-  activeApiQuery: ''         // query varian yang sedang dipakai (untuk kelanjutan scroll)
+  activeApiQuery: '',        // query varian yang sedang dipakai (untuk kelanjutan scroll)
+  reqSeq: 0,                 // penanda generasi request; hasil basi diabaikan
+  abort: null,               // AbortController request yang sedang berjalan
+  importing: false           // guard agar impor playlist tidak dobel
 };
 
 /* --------------------------- API status UI -------------------------------- */
@@ -965,17 +994,59 @@ function removeFromPlaylist(playlistId, vid) {
 
 /* ------------------------------ Search (debounced) -------------------------- */
 let debounceTimer = null;
+
+// Router tunggal: menentukan apakah input diperlakukan sebagai link playlist,
+// link/ID video tunggal, atau kata kunci pencarian biasa.
+function handleSearchSubmit(q) {
+  if (!q) return;
+  const parsed = parseYouTubeInput(q);
+  const importAll = document.getElementById('chkImportPlaylist').checked;
+
+  if (parsed.isLink && parsed.playlistId && importAll) {
+    importPlaylistFromUrl(parsed.playlistId, q);
+    return;
+  }
+  // Link playlist murni (tanpa v=) sementara toggle OFF: tidak ada yang bisa
+  // diputar. Hentikan di sini supaya tidak membakar 100 unit kuota `search`.
+  if (parsed.isLink && parsed.playlistId && !parsed.videoId && !importAll) {
+    toast('Ini link playlist. Aktifkan "Import Seluruh Playlist" untuk mengimpornya.', true);
+    return;
+  }
+  // Toggle OFF (atau link tanpa playlist): parameter list= & lainnya dibuang,
+  // hanya ID video yang dipakai. runSearch() menangani jalur ID langsung.
+  runSearch(q, true);
+}
+
 document.getElementById('searchInput').addEventListener('input', (e) => {
   clearTimeout(debounceTimer);
   const q = e.target.value.trim();
   searchState.query = q;
   if (!q) {
+    if (searchState.abort) { try { searchState.abort.abort(); } catch {} searchState.abort = null; }
+    searchState.reqSeq++;
+    searchState.loading = false;
     searchResults = [];
     searchState.exhausted = false;
     renderSearchList();
     return;
   }
-  debounceTimer = setTimeout(() => runSearch(q), DEBOUNCE_MS);
+  debounceTimer = setTimeout(() => handleSearchSubmit(q), DEBOUNCE_MS);
+});
+
+// Enter = eksekusi langsung tanpa menunggu debounce.
+document.getElementById('searchInput').addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  clearTimeout(debounceTimer);
+  handleSearchSubmit(e.target.value.trim());
+});
+
+// Mengubah status toggle saat link playlist sudah ada di kolom = jalankan ulang.
+document.getElementById('chkImportPlaylist').addEventListener('change', () => {
+  const q = document.getElementById('searchInput').value.trim();
+  if (!q) return;
+  const parsed = parseYouTubeInput(q);
+  if (parsed.isLink && parsed.playlistId) handleSearchSubmit(q);
 });
 
 /* --- Filter/Sort/View controls: setiap perubahan memulai pencarian baru --- */
@@ -1018,22 +1089,57 @@ function cleanDisplayTitle(rawTitle) {
   return t || rawTitle.trim();
 }
 
-function buildSearchQueries(query) {
-  // Perluasan query, urut prioritas sesuai spesifikasi:
-  // 1) official mv  2) official music video  3) official audio
-  const q = query.trim();
-  return [
-    `${q} official mv`,
-    `${q} official music video`,
-    `${q} official audio`
-  ];
+/* ---------------- Parser link/ID YouTube (dipakai search + impor playlist) ---------------- */
+const YT_ID_RE = /^[A-Za-z0-9_-]{11}$/;
+
+function parseYouTubeInput(raw) {
+  const out = { isLink: false, videoId: null, playlistId: null };
+  const q = (raw || '').trim();
+  if (!q) return out;
+
+  // 1) ID video telanjang (11 karakter). Syarat tambahan (mengandung angka,
+  //    '-', '_', atau campuran huruf besar-kecil) agar kata pencarian biasa
+  //    sepanjang 11 huruf tidak salah dikenali sebagai ID.
+  if (YT_ID_RE.test(q) && (/[-_0-9]/.test(q) || (/[a-z]/.test(q) && /[A-Z]/.test(q)))) {
+    out.isLink = true; out.videoId = q; return out;
+  }
+  if (!/youtu/i.test(q)) return out;
+
+  let url = null;
+  try {
+    url = new URL(/^https?:\/\//i.test(q) ? q : 'https://' + q);
+  } catch { return out; }
+
+  const host = url.hostname.replace(/^www\./i, '').toLowerCase();
+  if (host !== 'youtube.com' && host !== 'm.youtube.com' && host !== 'music.youtube.com' && host !== 'youtu.be') return out;
+
+  out.isLink = true;
+  // Playlist "radio"/mix (RD…) dan Watch Later (WL) tidak bisa dibaca API publik.
+  const list = url.searchParams.get('list');
+  if (list && !/^(RD|WL|LL)/.test(list)) out.playlistId = list;
+
+  if (host === 'youtu.be') {
+    const id = url.pathname.split('/').filter(Boolean)[0] || '';
+    if (YT_ID_RE.test(id)) out.videoId = id;
+  } else {
+    const v = url.searchParams.get('v');
+    if (v && YT_ID_RE.test(v)) out.videoId = v;
+    else {
+      const m = url.pathname.match(/\/(embed|shorts|v|live)\/([A-Za-z0-9_-]{11})/);
+      if (m) out.videoId = m[2];
+    }
+  }
+  return out;
 }
 
-function getDurationsForFilter() {
-  // Fokus pada Music (videoCategoryId=10) dan hindari YouTube Shorts dengan hanya
-  // mengambil durasi "medium" (4-20 mnt) dan "long" (>20 mnt) — Shorts selalu
-  // berdurasi jauh di bawah 4 menit sehingga bucket "short" API tidak pernah diambil.
-  return searchState.durationFilter === 'all' ? ['medium', 'long'] : [searchState.durationFilter];
+function buildSearchQueries(query) {
+  // Varian hanya dipakai bila kueri operator terasa terlalu pendek/umum.
+  // Kueri panjang/spesifik langsung dipakai apa adanya => hemat kuota.
+  const q = query.trim();
+  const wordCount = q.split(/\s+/).filter(Boolean).length;
+  const alreadySpecific = wordCount >= 4 || /official|mv|audio|lyric|live|cover|ost|op|ed/i.test(q);
+  if (alreadySpecific) return [q];
+  return [q, `${q} official mv`];
 }
 
 // isNewSearch=true -> reset (query/filter/sort baru berubah)
@@ -1044,92 +1150,198 @@ async function runSearch(query, isNewSearch = true) {
     settingsModal.classList.remove('hidden');
     return;
   }
-  if (searchState.loading) return;
+
+  // Batalkan request yang masih terbang; input baru selalu menang.
+  if (searchState.abort) { try { searchState.abort.abort(); } catch {} }
+  const controller = new AbortController();
+  searchState.abort = controller;
+  const mySeq = ++searchState.reqSeq;
+  const isStale = () => mySeq !== searchState.reqSeq;
+
   if (isNewSearch) {
     searchState.query = query;
-    searchState.tokens = {};
+    searchState.nextToken = null;
     searchState.seenIds = new Set();
     searchState.exhausted = false;
     searchResults = [];
-  } else if (searchState.exhausted) {
+  } else if (searchState.exhausted || searchState.loading) {
     return;
   }
 
-  const durations = getDurationsForFilter();
   searchState.loading = true;
   renderSearchList();
 
+  const finish = () => {
+    if (isStale()) return false;
+    searchState.loading = false;
+    if (searchState.abort === controller) searchState.abort = null;
+    return true;
+  };
+
   try {
-    // Kelanjutan scroll harus memakai varian query yang sama dengan pencarian awal.
-    // Pencarian baru mencoba varian sesuai prioritas, fallback ke varian berikutnya
-    // bila varian sebelumnya tidak menghasilkan apa pun.
-    const candidateQueries = isNewSearch ? buildSearchQueries(query) : [searchState.activeApiQuery];
-
-    async function fetchWithQuery(musicQuery) {
-      const requests = durations
-        .filter(dur => isNewSearch || searchState.tokens[dur])
-        .map(dur => {
-          const pageToken = isNewSearch ? '' : (searchState.tokens[dur] || '');
-          const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&videoCategoryId=10&videoDuration=${dur}&order=${searchState.order}&maxResults=25&q=${encodeURIComponent(musicQuery)}${pageToken ? `&pageToken=${pageToken}` : ''}&key=${apiKey}`;
-          return fetch(url).then(res => res.json().then(data => ({ res, data, dur })));
-        });
-      if (requests.length === 0) return null;
-      return Promise.all(requests);
-    }
-
-    let results = null;
-    let chosenQuery = candidateQueries[0];
-    for (const candidate of candidateQueries) {
-      const attempt = await fetchWithQuery(candidate);
-      if (!attempt) { results = null; chosenQuery = candidate; break; }
-      const hasItems = attempt.some(({ data }) => (data.items || []).length > 0);
-      if (hasItems || candidate === candidateQueries[candidateQueries.length - 1]) {
-        results = attempt;
-        chosenQuery = candidate;
-        break;
-      }
-    }
-    searchState.activeApiQuery = chosenQuery;
-
-    if (!results) {
+    /* --- Jalur MURAH: input berupa URL / ID video langsung (1 unit, bukan 100) --- */
+    const parsed = isNewSearch ? parseYouTubeInput(query) : { isLink: false };
+    if (parsed.isLink && parsed.videoId) {
+      const url = `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${encodeURIComponent(parsed.videoId)}&key=${apiKey}`;
+      const res = await fetch(url, { signal: controller.signal });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error?.message || 'Gagal mengambil data video');
+      const items = (data.items || []).map(it => ({
+        id: it.id,
+        title: cleanDisplayTitle(it.snippet.title),
+        channel: it.snippet.channelTitle,
+        thumb: it.snippet.thumbnails?.medium?.url || it.snippet.thumbnails?.default?.url || ''
+      }));
+      items.forEach(v => searchState.seenIds.add(v.id));
       searchState.exhausted = true;
-      searchState.loading = false;
-      renderSearchList();
+      searchState.activeApiQuery = query;
+      if (!finish()) return;
+      applySearchResults(items, true);
+      if (!items.length) toast('Video tidak ditemukan atau bersifat privat', true);
       return;
     }
 
-    const items = [];
-    for (const { res, data, dur } of results) {
-      if (!res.ok) {
-        throw new Error(data?.error?.message || 'Gagal mengambil hasil pencarian');
-      }
-      (data.items || []).forEach(it => {
-        const id = it.id.videoId;
-        if (!id || searchState.seenIds.has(id)) return;
-        searchState.seenIds.add(id);
-        items.push({
-          id,
-          title: cleanDisplayTitle(it.snippet.title),
-          channel: it.snippet.channelTitle,
-          thumb: it.snippet.thumbnails?.medium?.url || it.snippet.thumbnails?.default?.url || ''
-        });
-      });
-      // simpan nextPageToken per bucket durasi untuk unlimited scroll berikutnya
-      searchState.tokens[dur] = data.nextPageToken || null;
-    }
+    /* --- Jalur pencarian normal: SATU request per pemanggilan --- */
+    const candidateQueries = isNewSearch ? buildSearchQueries(query) : [searchState.activeApiQuery];
+    const pageToken = isNewSearch ? '' : (searchState.nextToken || '');
 
-    // exhausted jika semua bucket aktif sudah tidak punya nextPageToken
-    searchState.exhausted = durations.every(dur => !searchState.tokens[dur]);
-    searchState.loading = false;
+    const fetchWithQuery = async (musicQuery) => {
+      // Filter 'all' => parameter videoDuration DIHAPUS (1 request, bukan 2).
+      const durParam = searchState.durationFilter === 'all' ? '' : `&videoDuration=${searchState.durationFilter}`;
+      const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&videoCategoryId=10${durParam}`
+        + `&order=${searchState.order}&maxResults=25&q=${encodeURIComponent(musicQuery)}`
+        + `${pageToken ? `&pageToken=${pageToken}` : ''}&key=${apiKey}`;
+      const res = await fetch(url, { signal: controller.signal });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error?.message || 'Gagal mengambil hasil pencarian');
+      return data;
+    };
+
+    let data = null;
+    let chosenQuery = candidateQueries[0];
+    for (const candidate of candidateQueries) {
+      const attempt = await fetchWithQuery(candidate);
+      if (isStale()) return;
+      data = attempt;
+      chosenQuery = candidate;
+      if ((attempt.items || []).length > 0) break; // varian berikutnya hanya bila benar-benar kosong
+    }
+    searchState.activeApiQuery = chosenQuery;
+
+    const items = [];
+    (data?.items || []).forEach(it => {
+      const id = it.id?.videoId;
+      if (!id || searchState.seenIds.has(id)) return;
+      searchState.seenIds.add(id);
+      items.push({
+        id,
+        title: cleanDisplayTitle(it.snippet.title),
+        channel: it.snippet.channelTitle,
+        thumb: it.snippet.thumbnails?.medium?.url || it.snippet.thumbnails?.default?.url || ''
+      });
+    });
+
+    searchState.nextToken = data?.nextPageToken || null;
+    searchState.exhausted = !searchState.nextToken;
+    if (!finish()) return;
     applySearchResults(items, isNewSearch);
   } catch (err) {
+    if (err && err.name === 'AbortError') return; // dibatalkan oleh input baru: bukan error
+    if (isStale()) return;
     searchState.loading = false;
+    if (searchState.abort === controller) searchState.abort = null;
     if (isNewSearch) {
       document.getElementById('searchList').innerHTML = `<div class="state-msg">⚠ ${escapeHTML(err.message)}</div>`;
     } else {
       renderSearchList();
     }
     toast(err.message, true);
+  }
+}
+
+/* ---------------- Impor seluruh playlist YouTube (toggle ON) ---------------- */
+async function importPlaylistFromUrl(playlistId, sourceQuery) {
+  if (!apiKey) {
+    toast('Atur YouTube API key terlebih dahulu', true);
+    settingsModal.classList.remove('hidden');
+    return;
+  }
+  if (searchState.importing) return;
+  searchState.importing = true;
+  toast('Mengimpor playlist dari YouTube...');
+
+  try {
+    // 1 unit: ambil judul playlist untuk penamaan
+    let plName = '';
+    try {
+      const metaRes = await fetch(`https://www.googleapis.com/youtube/v3/playlists?part=snippet&id=${encodeURIComponent(playlistId)}&key=${apiKey}`);
+      const metaData = await metaRes.json();
+      if (metaRes.ok) plName = metaData.items?.[0]?.snippet?.title || '';
+    } catch {}
+    if (!plName) plName = 'Playlist YouTube ' + playlistId.slice(-6);
+
+    // 1 unit per halaman: ambil isi playlist
+    const collected = [];
+    let token = '';
+    for (let page = 0; page < PLAYLIST_IMPORT_MAX_PAGES; page++) {
+      const url = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${encodeURIComponent(playlistId)}`
+        + `&maxResults=50${token ? `&pageToken=${token}` : ''}&key=${apiKey}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error?.message || 'Gagal mengambil isi playlist');
+      (data.items || []).forEach(it => {
+        const sn = it.snippet || {};
+        const vid = sn.resourceId?.videoId;
+        if (!vid || !YT_ID_RE.test(vid)) return;
+        // Lewati video privat/terhapus: tidak bisa diputar di embed
+        if (sn.title === 'Private video' || sn.title === 'Deleted video') return;
+        collected.push({
+          id: vid,
+          title: cleanDisplayTitle(sn.title),
+          channel: sn.videoOwnerChannelTitle || sn.channelTitle || '',
+          thumb: sn.thumbnails?.medium?.url || sn.thumbnails?.default?.url || ''
+        });
+      });
+      token = data.nextPageToken || '';
+      if (!token) break;
+    }
+
+    if (!collected.length) {
+      toast('Playlist kosong atau tidak dapat diakses (privat?)', true);
+      return;
+    }
+
+    // Dedupe di dalam playlist itu sendiri
+    const seen = new Set();
+    const unique = collected.filter(v => (seen.has(v.id) ? false : (seen.add(v.id), true)));
+
+    // Simpan metadata video + buat playlist baru
+    unique.forEach(v => { videos[v.id] = v; });
+    Store.set(STORAGE_KEYS.VIDEOS, videos);
+
+    const newId = 'pl_' + Date.now();
+    playlists[newId] = { id: newId, name: plName, videoIds: unique.map(v => v.id) };
+    Store.set(STORAGE_KEYS.PLAYLISTS, playlists);
+    activePlaylistId = newId;
+    Store.set(STORAGE_KEYS.ACTIVE_PLAYLIST, activePlaylistId);
+
+    renderPlaylistSelect();
+    renderPlaylistList();
+
+    // Tampilkan juga hasilnya di panel pencarian sebagai konfirmasi visual
+    searchState.query = sourceQuery || plName;
+    searchState.activeApiQuery = '';
+    searchState.nextToken = null;
+    searchState.exhausted = true;
+    searchState.seenIds = new Set(unique.map(v => v.id));
+    applySearchResults(unique, true);
+
+    const truncated = token ? ' (dibatasi ' + (PLAYLIST_IMPORT_MAX_PAGES * 50) + ' video pertama)' : '';
+    toast(`Playlist "${plName}" diimpor: ${unique.length} video${truncated}`);
+  } catch (err) {
+    toast(err.message, true);
+  } finally {
+    searchState.importing = false;
   }
 }
 
@@ -1215,8 +1427,7 @@ function buildProjectorHTML(initState) {
   #overlayTextContent{
     font-family: 'Poppins', 'Segoe UI', system-ui, sans-serif;
     font-weight:800; line-height:1.3;
-    background: linear-gradient(180deg, #FFFDF8 0%, #FFE9C2 55%, #FFCB80 100%);
-    -webkit-background-clip: text; background-clip: text; color: transparent;
+    color:#FFFFFF;
     text-shadow:0 3px 10px rgba(0,0,0,0.55);
     filter: drop-shadow(0 4px 18px rgba(0,0,0,0.65)) drop-shadow(0 0 32px rgba(255,190,110,0.35));
     word-break:break-word; letter-spacing:.5px;
@@ -2006,6 +2217,19 @@ function updateNetExtraInfo() {
 setInterval(pingNetwork, 4000);
 
 /* ------------------------------ Global Hotkeys ------------------------------- */
+// Ctrl+Q / Cmd+Q: fokus + seleksi teks pada kolom pencarian.
+// Didaftarkan pada fase CAPTURE agar tetap jalan meski fokus sedang di input lain.
+document.addEventListener('keydown', (e) => {
+  const key = (e.key || '').toLowerCase();
+  if ((e.ctrlKey || e.metaKey) && !e.altKey && key === 'q') {
+    e.preventDefault();
+    e.stopPropagation();
+    const si = document.getElementById('searchInput');
+    si.focus();
+    si.select();
+  }
+}, true);
+
 document.addEventListener('keydown', (e) => {
   const tag = (e.target.tagName || '').toLowerCase();
   if (tag === 'input' || tag === 'textarea') return; // Enter-in-typingBox handled above

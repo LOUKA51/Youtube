@@ -360,6 +360,7 @@
       <button class="ctrl-btn" id="btnShuffle" title="Shuffle">🔀 Shuffle</button>
       <button class="ctrl-btn" id="btnLoop" title="Loop">🔁 Loop</button>
       <button class="ctrl-btn" id="btnMute" title="Mute (M)">🔊 Mute</button>
+      <button class="ctrl-btn" id="btnCaptions" title="Subtitle/Closed Caption (C)">💬 CC</button>
       <div class="spacer"></div>
       <div class="volume-row">
         🔊 <input type="range" id="volumeSlider" min="0" max="100" value="80">
@@ -428,7 +429,7 @@
         <div class="proj-status" id="projStatus"><span class="led"></span><span id="projStatusText">Belum terbuka</span></div>
       </div>
       <button class="btn primary block" id="btnOpenDisplay">🖥️ Buka Layar Proyektor</button>
-      <p class="hint">Menekan <b>Play</b> otomatis membuka Layar Proyektor dalam mode layar penuh jika belum aktif. Sinkronisasi satu arah Operator → Proyektor via <code>window.open()</code>, tanpa server. Tekan <b>I</b> untuk panduan hotkeys lengkap.</p>
+      <p class="hint">Menekan <b>Play</b> otomatis membuka Layar Proyektor dalam mode layar penuh jika belum aktif. Sinkronisasi satu arah Operator → Proyektor via <code>window.open()</code>, tanpa server. Menutup tab Operator akan otomatis menutup Layar Proyektor juga. Tekan <b>I</b> untuk panduan hotkeys lengkap.</p>
     </div>
   </div>
 
@@ -476,6 +477,7 @@
       <div class="kb-row"><span class="kb-key">→</span><span class="kb-desc">Lompat ke video berikutnya (Next)</span></div>
       <div class="kb-row"><span class="kb-key">←</span><span class="kb-desc">Kembali ke video sebelumnya (Previous)</span></div>
       <div class="kb-row"><span class="kb-key">M</span><span class="kb-desc">Toggle Mute / Unmute suara</span></div>
+      <div class="kb-row"><span class="kb-key">C</span><span class="kb-desc">Aktifkan / nonaktifkan Subtitle (Closed Caption)</span></div>
     </div>
     <div class="modal-actions">
       <button class="btn primary" id="btnCloseKeybind">Tutup</button>
@@ -535,6 +537,10 @@ let playlists = Store.get(STORAGE_KEYS.PLAYLISTS, null);
 let videos = Store.get(STORAGE_KEYS.VIDEOS, {});
 let activePlaylistId = Store.get(STORAGE_KEYS.ACTIVE_PLAYLIST, null);
 let playerState = Store.get(STORAGE_KEYS.PLAYER_STATE, { videoId: null, time: 0, volume: 80, loop: false, shuffle: false });
+// Subtitle/Closed Caption SENGAJA tidak disimpan ke localStorage: setiap kali
+// halaman Operator dibuka ulang, status Subtitle SELALU OFF secara default.
+let ccEnabled = false;
+if (playerState.captions === undefined) playerState.captions = false;
 
 if (!playlists) {
   const defaultId = 'pl_' + Date.now();
@@ -1082,6 +1088,16 @@ function buildProjectorHTML(initState) {
     setVolume: function(v){ runOrQueue(function(){ ytPlayer.setVolume(v); }); },
     mute: function(){ runOrQueue(function(){ ytPlayer.mute(); }); },
     unmute: function(){ runOrQueue(function(){ ytPlayer.unMute(); }); },
+    setCaptions: function(enabled){
+      runOrQueue(function(){
+        if (enabled) {
+          ytPlayer.loadModule('captions');
+          ytPlayer.setOption('captions', 'track', {});
+        } else {
+          ytPlayer.unloadModule('captions');
+        }
+      });
+    },
     showText: showText,
     hideText: hideText
   };
@@ -1089,11 +1105,15 @@ function buildProjectorHTML(initState) {
   window.onYouTubeIframeAPIReady = function () {
     ytPlayer = new YT.Player('ytplayer', {
       host: 'https://www.youtube.com',
-      playerVars: { autoplay: 1, controls: 0, rel: 0, modestbranding: 1 },
+      playerVars: { autoplay: 1, controls: 0, rel: 0, modestbranding: 1, cc_load_policy: initState.captions ? 1 : 0 },
       events: {
         onReady: function () {
           ytReady = true;
           ytPlayer.setVolume(initState.volume != null ? initState.volume : 80);
+          if (initState.captions) {
+            ytPlayer.loadModule('captions');
+            ytPlayer.setOption('captions', 'track', {});
+          }
           fitPlayerCover();
           setTimeout(fitPlayerCover, 300); // re-fit once the swapped iframe settles
           if (initState.vid) {
@@ -1156,6 +1176,7 @@ function openProjector() {
     vid: currentVideoId,
     time: playerState.time || 0,
     volume: playerState.volume != null ? playerState.volume : 80,
+    captions: !!ccEnabled,
     blur: PROJECTOR_BLUR
   };
   projectorWin = window.open('', 'yume_projector', 'width=1280,height=720,menubar=no,toolbar=no,location=no');
@@ -1170,6 +1191,18 @@ function openProjector() {
   toast('Layar Proyektor dibuka');
 }
 document.getElementById('btnOpenDisplay').addEventListener('click', openProjector);
+
+// Jika tab/window Operator ditutup (atau direfresh/dinavigasi), Panel Proyektor
+// ikut ditutup otomatis — Proyektor tidak boleh "menggantung" tanpa Operator.
+function closeProjectorWindow() {
+  try {
+    if (projectorWin && !projectorWin.closed) {
+      projectorWin.close();
+    }
+  } catch (e) { /* window mungkin sudah lintas-state saat unload, abaikan */ }
+}
+window.addEventListener('beforeunload', closeProjectorWindow);
+window.addEventListener('pagehide', closeProjectorWindow);
 
 function requestProjectorFullscreen() {
   if (!projectorWin || projectorWin.closed) return;
@@ -1203,6 +1236,7 @@ function sendToProjector(action, payload) {
     else if (action === 'unmute') api.unmute();
     else if (action === 'text') api.showText(payload.text);
     else if (action === 'hideText') api.hideText();
+    else if (action === 'captions') api.setCaptions(payload.enabled);
     return true;
   } catch (err) {
     console.error('Perintah ke Proyektor gagal', err);
@@ -1225,6 +1259,18 @@ function updateMuteBtn() {
   document.getElementById('btnMute').textContent = isMuted ? '🔇 Unmute' : '🔊 Mute';
   document.getElementById('btnMute').classList.toggle('active', isMuted);
 }
+function updateCaptionsBtn() {
+  const btn = document.getElementById('btnCaptions');
+  btn.textContent = ccEnabled ? '💬 CC Aktif' : '💬 CC';
+  btn.classList.toggle('active', !!ccEnabled);
+}
+function toggleCaptions() {
+  ccEnabled = !ccEnabled;
+  sendToProjector('captions', { enabled: ccEnabled });
+  updateCaptionsBtn();
+  toast(ccEnabled ? 'Subtitle diaktifkan' : 'Subtitle dinonaktifkan');
+}
+document.getElementById('btnCaptions').addEventListener('click', toggleCaptions);
 
 function loadVideoIntoPlayer(vid, startSeconds = 0, autoplay = true) {
   if (autoplay) ensureProjectorReady();
@@ -1376,6 +1422,8 @@ document.addEventListener('keydown', (e) => {
     isMuted = !isMuted;
     sendToProjector(isMuted ? 'mute' : 'unmute');
     updateMuteBtn();
+  } else if (key === 'c') {
+    toggleCaptions();
   }
 });
 
@@ -1384,6 +1432,7 @@ function init() {
   refreshApiStatusUI();
   refreshProjectorStatusUI();
   updateMuteBtn();
+  updateCaptionsBtn();
   document.getElementById('btnShuffle').classList.toggle('active', !!playerState.shuffle);
   document.getElementById('btnLoop').classList.toggle('active', !!playerState.loop);
   renderPlaylistSelect();

@@ -106,13 +106,13 @@
   /* ===== MAIN LAYOUT ===== */
   .app{
     display:grid;
-    grid-template-columns: 1fr 380px;
+    grid-template-columns: 1fr 460px;
     gap:20px;
     padding:20px;
-    max-width:1500px;
+    max-width:1600px;
     margin:0 auto;
   }
-  @media (max-width: 980px){
+  @media (max-width: 1080px){
     .app{ grid-template-columns:1fr; }
   }
 
@@ -198,6 +198,37 @@
   .list{ display:flex; flex-direction:column; gap:8px; max-height:38vh; overflow-y:auto; padding-right:2px; }
   .state-msg{ color:var(--text-dim); font-size:.85rem; text-align:center; padding:24px 10px; }
 
+  /* Box Hasil Pencarian: satu box berisi input pencarian + filter/sort + hasil */
+  .search-panel .list{ max-height:64vh; }
+  /* Box Playlist diperbesar */
+  #playlistList{ max-height:60vh; }
+
+  /* ===== Kontrol Filter / Sort / View Toggle (di dalam box Hasil Pencarian) ===== */
+  .search-box{ position:relative; }
+  .search-box input{
+    width:100%; padding:11px 44px 11px 16px;
+    background:#FFF7DD12; border:1px solid var(--border); border-radius:12px;
+    color:var(--text); font-size:.92rem; outline:none; transition:all .2s ease;
+  }
+  .search-box input::placeholder{ color:var(--text-dim); }
+  .search-box input:focus{ border-color:var(--accent); background:#FFF7DD1f; box-shadow:0 0 0 3px #80A1BA33; }
+  .search-box .icon{ position:absolute; right:14px; top:50%; transform:translateY(-50%); opacity:.7; font-size:1rem; pointer-events:none; }
+
+  .search-controls{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .search-controls select{
+    background:#FFF7DD12; border:1px solid var(--border); color:var(--text);
+    padding:8px 10px; border-radius:10px; font-size:.8rem; outline:none;
+  }
+  .search-controls select option{ background:#1a1e26; color:var(--text); }
+  .search-controls label{ font-size:.72rem; color:var(--text-dim); display:flex; align-items:center; gap:6px; }
+  .view-toggle{ display:flex; gap:4px; margin-left:auto; }
+  .view-toggle button{
+    width:32px; height:32px; border-radius:9px; background:#FFF7DD12; border:1px solid #91C4C333;
+    color:var(--text-dim); display:flex; align-items:center; justify-content:center; font-size:.9rem; transition:.15s;
+  }
+  .view-toggle button:hover{ color:var(--text); border-color:var(--border); }
+  .view-toggle button.active{ background:var(--accent); color:#0b0d12; border-color:var(--accent); }
+
   .item{
     display:flex; gap:10px; padding:8px; border-radius:12px;
     background:var(--card-bg); border:1px solid transparent;
@@ -226,6 +257,28 @@
   }
   .item-actions button:hover{ background:var(--accent); color:#0b0d12; }
   .item-actions button.danger:hover{ background:var(--danger); color:#0b0d12; }
+
+  /* ===== Grid View (Hasil Pencarian) ===== */
+  .list.grid-view{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(190px, 1fr));
+    gap:14px;
+    align-content:start;
+  }
+  .list.grid-view .item{
+    flex-direction:column; align-items:stretch; padding:0; overflow:hidden;
+    background:var(--card-bg); border:1px solid transparent;
+  }
+  .list.grid-view .item img{ width:100%; aspect-ratio:16/9; border-radius:12px 12px 0 0; }
+  .list.grid-view .item .info{ padding:8px 10px 10px; gap:4px; }
+  .list.grid-view .item .item-actions{
+    flex-direction:row; position:absolute; top:8px; right:8px;
+    background:#0b0d12b3; border-radius:8px; padding:2px;
+  }
+  .list.grid-view .state-msg,
+  .list.grid-view .list-loading{ grid-column:1 / -1; }
+
+  .list-loading{ text-align:center; color:var(--text-dim); font-size:.78rem; padding:12px 10px; }
 
   .skel{ background:linear-gradient(90deg, #FFF7DD10 25%, #FFF7DD22 37%, #FFF7DD10 63%); background-size:400% 100%; animation:shimmer 1.4s ease infinite; border-radius:8px; }
   @keyframes shimmer{ 0%{background-position:100% 0;} 100%{background-position:0 0;} }
@@ -270,10 +323,7 @@
 
 <div class="topbar">
   <div class="logo"><span class="dot" id="projLed"></span> Yume Player · Operator</div>
-  <div class="searchwrap">
-    <input id="searchInput" type="text" placeholder="Cari musik, video musik, atau lirik..." autocomplete="off">
-    <span class="icon">🔍</span>
-  </div>
+  <div class="spacer"></div>
   <button class="api-status" id="apiStatusBtn" title="Klik untuk atur API Key">
     <span class="led" id="apiLed"></span>
     <span id="apiStatusText">API belum diatur</span>
@@ -318,10 +368,35 @@
       <button class="icon-btn" id="btnDeletePlaylist" title="Hapus playlist ini">🗑</button>
     </div>
 
-    <div class="glass panel">
+    <div class="glass panel search-panel">
       <div class="panel-head">
         <h3>🔎 Hasil Pencarian</h3>
         <span class="count" id="searchCount">0</span>
+      </div>
+      <div class="search-box">
+        <input id="searchInput" type="text" placeholder="Cari musik, video musik, atau lirik..." autocomplete="off">
+        <span class="icon">🔍</span>
+      </div>
+      <div class="search-controls">
+        <label>Urutkan
+          <select id="sortSelect">
+            <option value="relevance">Relevansi</option>
+            <option value="date">Terbaru</option>
+            <option value="viewCount">Populer</option>
+            <option value="title">Judul (A-Z)</option>
+          </select>
+        </label>
+        <label>Durasi
+          <select id="durationSelect">
+            <option value="all">Semua</option>
+            <option value="medium">Sedang (4-20 mnt)</option>
+            <option value="long">Panjang (&gt;20 mnt)</option>
+          </select>
+        </label>
+        <div class="view-toggle">
+          <button type="button" id="btnViewList" class="active" title="Tampilan List">☰</button>
+          <button type="button" id="btnViewGrid" title="Tampilan Grid">▦</button>
+        </div>
       </div>
       <div class="list" id="searchList"></div>
     </div>
@@ -468,6 +543,18 @@ let isPlaying = false;
 let isMuted = false;
 let searchResults = []; // array of videoIds currently shown from last search
 let projectorWin = null;
+
+/* ------------------------- Search state (filter/sort/grid/scroll) ---------- */
+const searchState = {
+  query: '',
+  order: 'relevance',        // relevance | date | viewCount | title
+  durationFilter: 'all',     // all | medium | long
+  viewMode: 'list',          // list | grid
+  tokens: {},                // { [duration]: nextPageToken|null }
+  seenIds: new Set(),
+  loading: false,
+  exhausted: false
+};
 
 /* --------------------------- API status UI -------------------------------- */
 function refreshApiStatusUI() {
@@ -619,12 +706,21 @@ function renderPlaylistList() {
 function renderSearchList() {
   const list = document.getElementById('searchList');
   const count = document.getElementById('searchCount');
+  list.classList.toggle('grid-view', searchState.viewMode === 'grid');
   count.textContent = searchResults.length;
   if (searchResults.length === 0) {
-    list.innerHTML = `<div class="state-msg">Ketik sesuatu untuk mencari video di YouTube.</div>`;
+    list.innerHTML = searchState.loading
+      ? skeletonHTML(6)
+      : `<div class="state-msg">Ketik sesuatu untuk mencari video di YouTube.</div>`;
     return;
   }
-  list.innerHTML = searchResults.map(vid => videoItemHTML(vid, { showPlaylistActions: false, showSearchActions: true })).join('');
+  let html = searchResults.map(vid => videoItemHTML(vid, { showPlaylistActions: false, showSearchActions: true })).join('');
+  if (searchState.loading) {
+    html += `<div class="list-loading">⏳ Memuat lebih banyak hasil...</div>`;
+  } else if (searchState.exhausted) {
+    html += `<div class="list-loading">— Semua hasil sudah ditampilkan —</div>`;
+  }
+  list.innerHTML = html;
 }
 
 document.getElementById('playlistList').addEventListener('click', handleListClick);
@@ -671,51 +767,92 @@ let debounceTimer = null;
 document.getElementById('searchInput').addEventListener('input', (e) => {
   clearTimeout(debounceTimer);
   const q = e.target.value.trim();
+  searchState.query = q;
   if (!q) {
     searchResults = [];
+    searchState.exhausted = false;
     renderSearchList();
     return;
   }
   debounceTimer = setTimeout(() => runSearch(q), DEBOUNCE_MS);
 });
 
-async function runSearch(query) {
+/* --- Filter/Sort/View controls: setiap perubahan memulai pencarian baru --- */
+document.getElementById('sortSelect').addEventListener('change', (e) => {
+  searchState.order = e.target.value;
+  if (searchState.query) runSearch(searchState.query, true);
+});
+document.getElementById('durationSelect').addEventListener('change', (e) => {
+  searchState.durationFilter = e.target.value;
+  if (searchState.query) runSearch(searchState.query, true);
+});
+document.getElementById('btnViewList').addEventListener('click', () => setViewMode('list'));
+document.getElementById('btnViewGrid').addEventListener('click', () => setViewMode('grid'));
+function setViewMode(mode) {
+  searchState.viewMode = mode;
+  document.getElementById('btnViewList').classList.toggle('active', mode === 'list');
+  document.getElementById('btnViewGrid').classList.toggle('active', mode === 'grid');
+  renderSearchList();
+}
+
+function getDurationsForFilter() {
+  // Fokus pada Music (videoCategoryId=10) dan hindari YouTube Shorts dengan hanya
+  // mengambil durasi "medium" (4-20 mnt) dan "long" (>20 mnt) — Shorts selalu
+  // berdurasi jauh di bawah 4 menit sehingga bucket "short" API tidak pernah diambil.
+  return searchState.durationFilter === 'all' ? ['medium', 'long'] : [searchState.durationFilter];
+}
+
+// isNewSearch=true -> reset (query/filter/sort baru berubah)
+// isNewSearch=false -> lanjutkan (dipicu oleh unlimited scroll)
+async function runSearch(query, isNewSearch = true) {
   if (!apiKey) {
     toast('Atur YouTube API key terlebih dahulu', true);
     settingsModal.classList.remove('hidden');
     return;
   }
-  const cache = Store.get(STORAGE_KEYS.SEARCH_CACHE, {});
-  const cached = cache[query];
-  if (cached && (Date.now() - cached.ts) < SEARCH_CACHE_TTL) {
-    applySearchResults(cached.items);
+  if (searchState.loading) return;
+  if (isNewSearch) {
+    searchState.query = query;
+    searchState.tokens = {};
+    searchState.seenIds = new Set();
+    searchState.exhausted = false;
+    searchResults = [];
+  } else if (searchState.exhausted) {
     return;
   }
 
-  document.getElementById('searchList').innerHTML = skeletonHTML(6);
+  const durations = getDurationsForFilter();
+  searchState.loading = true;
+  renderSearchList();
 
   try {
-    // Focus on Music (videoCategoryId=10) and exclude YouTube Shorts by only
-    // fetching "medium" (4–20 min) and "long" (20 min+) durations — Shorts are
-    // always well under 4 minutes, so the API's "short" bucket is skipped entirely.
     const musicQuery = `${query} official music video`;
-    const durations = ['medium', 'long'];
-    const requests = durations.map(dur => {
-      const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&videoCategoryId=10&videoDuration=${dur}&maxResults=25&q=${encodeURIComponent(musicQuery)}&key=${apiKey}`;
-      return fetch(url).then(res => res.json().then(data => ({ res, data })));
-    });
+    const requests = durations
+      .filter(dur => isNewSearch || searchState.tokens[dur])
+      .map(dur => {
+        const pageToken = isNewSearch ? '' : (searchState.tokens[dur] || '');
+        const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&videoCategoryId=10&videoDuration=${dur}&order=${searchState.order}&maxResults=25&q=${encodeURIComponent(musicQuery)}${pageToken ? `&pageToken=${pageToken}` : ''}&key=${apiKey}`;
+        return fetch(url).then(res => res.json().then(data => ({ res, data, dur })));
+      });
+
+    if (requests.length === 0) {
+      searchState.exhausted = true;
+      searchState.loading = false;
+      renderSearchList();
+      return;
+    }
+
     const results = await Promise.all(requests);
 
-    const seen = new Set();
     const items = [];
-    for (const { res, data } of results) {
+    for (const { res, data, dur } of results) {
       if (!res.ok) {
         throw new Error(data?.error?.message || 'Gagal mengambil hasil pencarian');
       }
       (data.items || []).forEach(it => {
         const id = it.id.videoId;
-        if (!id || seen.has(id)) return;
-        seen.add(id);
+        if (!id || searchState.seenIds.has(id)) return;
+        searchState.seenIds.add(id);
         items.push({
           id,
           title: it.snippet.title,
@@ -723,13 +860,21 @@ async function runSearch(query) {
           thumb: it.snippet.thumbnails?.medium?.url || it.snippet.thumbnails?.default?.url || ''
         });
       });
+      // simpan nextPageToken per bucket durasi untuk unlimited scroll berikutnya
+      searchState.tokens[dur] = data.nextPageToken || null;
     }
 
-    cache[query] = { ts: Date.now(), items };
-    Store.set(STORAGE_KEYS.SEARCH_CACHE, cache);
-    applySearchResults(items);
+    // exhausted jika semua bucket aktif sudah tidak punya nextPageToken
+    searchState.exhausted = durations.every(dur => !searchState.tokens[dur]);
+    searchState.loading = false;
+    applySearchResults(items, isNewSearch);
   } catch (err) {
-    document.getElementById('searchList').innerHTML = `<div class="state-msg">⚠ ${escapeHTML(err.message)}</div>`;
+    searchState.loading = false;
+    if (isNewSearch) {
+      document.getElementById('searchList').innerHTML = `<div class="state-msg">⚠ ${escapeHTML(err.message)}</div>`;
+    } else {
+      renderSearchList();
+    }
     toast(err.message, true);
   }
 }
@@ -743,12 +888,21 @@ function skeletonHTML(n) {
   return html;
 }
 
-function applySearchResults(items) {
+function applySearchResults(items, isNewSearch) {
   items.forEach(v => { videos[v.id] = v; });
   Store.set(STORAGE_KEYS.VIDEOS, videos);
-  searchResults = items.map(v => v.id);
+  const ids = items.map(v => v.id);
+  searchResults = isNewSearch ? ids : searchResults.concat(ids);
   renderSearchList();
 }
+
+/* --- Unlimited Scroll: memuat halaman berikutnya saat mendekati akhir list --- */
+document.getElementById('searchList').addEventListener('scroll', (e) => {
+  const el = e.target;
+  if (searchState.loading || searchState.exhausted || !searchState.query) return;
+  const nearBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 120;
+  if (nearBottom) runSearch(searchState.query, false);
+});
 
 /* ------------------------- Projector bridge (one-way) ----------------------- */
 function buildProjectorHTML(initState) {

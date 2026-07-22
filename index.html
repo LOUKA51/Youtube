@@ -146,6 +146,19 @@
   .volume-row{ display:flex; align-items:center; gap:8px; color:var(--text-dim); font-size:.85rem; }
   .volume-row input[type=range]{ width:100px; accent-color:var(--accent); }
 
+  .quality-row{
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    padding:12px 14px;
+  }
+  .quality-label{ font-size:.85rem; color:var(--text-dim); white-space:nowrap; }
+  .quality-row select{
+    background:#FFF7DD12; border:1px solid var(--border); color:var(--text);
+    padding:8px 12px; border-radius:10px; font-size:.85rem; outline:none;
+  }
+  .quality-row select option{ background:#1a1e26; color:var(--text); }
+  .quality-active{ font-size:.78rem; color:var(--text-dim); white-space:nowrap; }
+  .net-mini{ font-size:.78rem; color:var(--text-dim); white-space:nowrap; }
+
   .typing-row{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:14px; }
   .typing-row input[type=text]{
     flex:1; min-width:180px; padding:10px 14px;
@@ -324,6 +337,20 @@
   .toast.err{ background:var(--danger); }
   @keyframes toastin{ from{ opacity:0; transform:translateY(8px);} to{ opacity:1; transform:translateY(0);} }
 
+  /* ===== BOX BARU: Kondisi FPS & Jaringan (bagian paling bawah Panel Operator) ===== */
+  .stats-wrap{ max-width:1600px; margin:0 auto; padding:0 20px 20px; }
+  .stats-panel{ padding:16px; display:flex; flex-direction:column; gap:12px; }
+  .stats-grid{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media (max-width: 780px){ .stats-grid{ grid-template-columns:1fr; } }
+  .stat-card{ display:flex; flex-direction:column; gap:8px; }
+  .stat-top{ display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
+  .stat-label{ font-size:.82rem; color:var(--text-dim); }
+  .stat-value{ font-size:1rem; font-weight:700; text-shadow:0 2px 10px rgba(0,0,0,0.5); }
+  .stat-canvas{
+    width:100%; height:80px; display:block; border-radius:10px;
+    background:#FFF7DD0d; border:1px solid #91C4C333;
+  }
+
   .hidden{ display:none !important; }
 
   footer{ text-align:center; padding:18px; color:var(--text-dim); font-size:.75rem; }
@@ -365,6 +392,16 @@
       <div class="volume-row">
         🔊 <input type="range" id="volumeSlider" min="0" max="100" value="80">
       </div>
+    </div>
+
+    <div class="glass quality-row">
+      <span class="quality-label">🎞️ Kualitas Video</span>
+      <select id="qualitySelect">
+        <option value="auto">Auto (Standar YouTube)</option>
+      </select>
+      <span class="quality-active" id="qualityActive">Sedang: —</span>
+      <div class="spacer"></div>
+      <span class="net-mini" id="netMini" title="Latensi jaringan saat ini">📶 —</span>
     </div>
 
     <div class="glass typing-row">
@@ -433,6 +470,31 @@
     </div>
   </div>
 
+</div>
+
+<div class="stats-wrap">
+  <div class="glass panel stats-panel">
+    <div class="panel-head">
+      <h3>📊 Kondisi Sistem — FPS &amp; Jaringan</h3>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-top">
+          <span class="stat-label">🎞️ FPS Layar Proyektor</span>
+          <span class="stat-value" id="fpsValue">-- fps</span>
+        </div>
+        <canvas id="fpsCanvas" class="stat-canvas" width="600" height="80"></canvas>
+      </div>
+      <div class="stat-card">
+        <div class="stat-top">
+          <span class="stat-label">📶 Latensi Jaringan</span>
+          <span class="stat-value" id="netValue">-- ms</span>
+        </div>
+        <canvas id="netCanvas" class="stat-canvas" width="600" height="80"></canvas>
+      </div>
+    </div>
+    <p class="hint" id="netExtraInfo">Mengukur kondisi jaringan...</p>
+  </div>
 </div>
 
 <footer>Yume Player — pemutar YouTube personal · dibuat untuk penggunaan pribadi</footer>
@@ -1098,14 +1160,47 @@ function buildProjectorHTML(initState) {
         }
       });
     },
+    setQuality: function(level){
+      // 'auto' -> kembalikan ke perilaku standar YouTube (adaptive bitrate
+      // otomatis mengikuti kondisi jaringan/perangkat). Selain itu -> paksa
+      // resolusi manual sesuai pilihan Operator.
+      runOrQueue(function(){
+        ytPlayer.setPlaybackQuality(level === 'auto' ? 'default' : level);
+      });
+    },
     showText: showText,
     hideText: hideText
   };
 
+  // ------------------------- Monitor FPS Proyektor ---------------------------
+  // Mengukur frame rate render halaman Proyektor (proxy kehalusan pemutaran
+  // video) lalu melaporkannya ke Operator setiap ~1 detik untuk grafik.
+  (function () {
+    var frames = 0, last = performance.now();
+    function loop(now) {
+      frames++;
+      if (now - last >= 1000) {
+        var fps = Math.round((frames * 1000) / (now - last));
+        frames = 0; last = now;
+        try {
+          if (window.opener && window.opener.YumeOperatorCallback) {
+            window.opener.YumeOperatorCallback.onFps(fps);
+          }
+        } catch (err) {}
+      }
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  })();
+
   window.onYouTubeIframeAPIReady = function () {
     ytPlayer = new YT.Player('ytplayer', {
       host: 'https://www.youtube.com',
-      playerVars: { autoplay: 1, controls: 0, rel: 0, modestbranding: 1, cc_load_policy: initState.captions ? 1 : 0 },
+      playerVars: {
+        autoplay: 1, controls: 0, rel: 0, modestbranding: 1,
+        cc_load_policy: initState.captions ? 1 : 0,
+        iv_load_policy: 3 // sembunyikan anotasi video: mengurangi beban render, optimasi kelancaran
+      },
       events: {
         onReady: function () {
           ytReady = true;
@@ -1131,6 +1226,21 @@ function buildProjectorHTML(initState) {
               }
             } catch (err) {}
           }
+          // Laporkan daftar resolusi yang tersedia untuk video yang sedang
+          // dimuat, supaya dropdown Kualitas Video di Operator selalu terkini.
+          try {
+            if (window.opener && window.opener.YumeOperatorCallback && ytPlayer.getAvailableQualityLevels) {
+              var levels = ytPlayer.getAvailableQualityLevels();
+              if (levels && levels.length) window.opener.YumeOperatorCallback.onQualityLevels(levels);
+            }
+          } catch (err) {}
+        },
+        onPlaybackQualityChange: function (e) {
+          try {
+            if (window.opener && window.opener.YumeOperatorCallback) {
+              window.opener.YumeOperatorCallback.onQualityChange(e.data);
+            }
+          } catch (err) {}
         }
       }
     });
@@ -1237,6 +1347,7 @@ function sendToProjector(action, payload) {
     else if (action === 'text') api.showText(payload.text);
     else if (action === 'hideText') api.hideText();
     else if (action === 'captions') api.setCaptions(payload.enabled);
+    else if (action === 'quality') api.setQuality(payload.level);
     return true;
   } catch (err) {
     console.error('Perintah ke Proyektor gagal', err);
@@ -1245,10 +1356,14 @@ function sendToProjector(action, payload) {
 }
 
 // One necessary exception to the strict one-way flow: the Projector calls this
-// back directly (via window.opener) purely to signal "video ended", so
-// Loop/Shuffle/Auto-Next keeps working. No BroadcastChannel is used.
+// back directly (via window.opener) purely to signal "video ended", laporan FPS,
+// dan status kualitas video — semuanya searah dari Proyektor ke Operator saja
+// (Operator tidak pernah membaca state internal Proyektor secara langsung).
 window.YumeOperatorCallback = {
-  onEnded: function () { handleVideoEnded(); }
+  onEnded: function () { handleVideoEnded(); },
+  onFps: function (fps) { recordFpsSample(fps); },
+  onQualityLevels: function (levels) { populateQualityOptions(levels); },
+  onQualityChange: function (q) { updateQualityActiveBadge(q); }
 };
 
 /* ------------------------------ Playback logic ------------------------------ */
@@ -1272,6 +1387,61 @@ function toggleCaptions() {
 }
 document.getElementById('btnCaptions').addEventListener('click', toggleCaptions);
 
+/* ------------------------- Kualitas Video (Manual/Auto) --------------------- */
+// Pilihan kualitas SELALU dimulai dari 'auto' setiap sesi (perilaku adaptif
+// standar YouTube) — sama seperti Subtitle, tidak disimpan ke localStorage.
+let selectedQuality = 'auto';
+const QUALITY_LABELS = {
+  auto: 'Auto (Standar YouTube)',
+  highres: 'Sangat Tinggi',
+  hd2160: '2160p (4K)',
+  hd1440: '1440p (2K)',
+  hd1080: '1080p (Full HD)',
+  hd720: '720p (HD)',
+  large: '480p',
+  medium: '360p',
+  small: '240p',
+  tiny: '144p'
+};
+let lastKnownQualityLevels = [];
+
+function populateQualityOptions(levels) {
+  lastKnownQualityLevels = levels.slice();
+  const sel = document.getElementById('qualitySelect');
+  const prevValue = sel.value || selectedQuality;
+  sel.innerHTML = '';
+  const autoOpt = document.createElement('option');
+  autoOpt.value = 'auto';
+  autoOpt.textContent = QUALITY_LABELS.auto;
+  sel.appendChild(autoOpt);
+  levels.forEach(level => {
+    const opt = document.createElement('option');
+    opt.value = level;
+    opt.textContent = QUALITY_LABELS[level] || level;
+    sel.appendChild(opt);
+  });
+  // Pertahankan pilihan Operator sebelumnya jika masih tersedia untuk video ini
+  if ([...sel.options].some(o => o.value === prevValue)) {
+    sel.value = prevValue;
+  } else {
+    sel.value = 'auto';
+    selectedQuality = 'auto';
+  }
+}
+
+function updateQualityActiveBadge(q) {
+  const badge = document.getElementById('qualityActive');
+  badge.textContent = 'Sedang: ' + (QUALITY_LABELS[q] || q || '—');
+}
+
+document.getElementById('qualitySelect').addEventListener('change', (e) => {
+  selectedQuality = e.target.value;
+  sendToProjector('quality', { level: selectedQuality });
+  toast(selectedQuality === 'auto'
+    ? 'Kualitas video: Auto (Standar YouTube)'
+    : `Kualitas video diatur manual: ${QUALITY_LABELS[selectedQuality] || selectedQuality}`);
+});
+
 function loadVideoIntoPlayer(vid, startSeconds = 0, autoplay = true) {
   if (autoplay) ensureProjectorReady();
   currentVideoId = vid;
@@ -1288,6 +1458,11 @@ function loadVideoIntoPlayer(vid, startSeconds = 0, autoplay = true) {
   playerState.time = startSeconds;
   Store.set(STORAGE_KEYS.PLAYER_STATE, playerState);
   sendToProjector('loadVideo', { vid, time: startSeconds });
+  // Jika Operator sedang memakai kualitas manual (bukan Auto), terapkan ulang
+  // setelah video baru selesai dimuat oleh Proyektor.
+  if (selectedQuality !== 'auto') {
+    setTimeout(() => sendToProjector('quality', { level: selectedQuality }), 1200);
+  }
   isPlaying = autoplay;
   updatePlayPauseBtn();
   renderPlaylistList();
@@ -1391,6 +1566,103 @@ document.getElementById('btnHideText').addEventListener('click', () => {
   sendToProjector('hideText');
 });
 
+/* ------------------- Kondisi Sistem: FPS & Jaringan (grafik) ---------------- */
+// Optimisasi: kualitas video Auto memakai adaptive bitrate bawaan YouTube yang
+// otomatis menyesuaikan ke kondisi jaringan. Panel ini membantu Operator
+// memantau kehalusan (FPS Proyektor) dan latensi jaringan secara real-time,
+// serta memberi saran bila jaringan terdeteksi lambat saat kualitas manual aktif.
+const MAX_SAMPLES = 40;
+let fpsHistory = [];
+let netHistory = [];
+let lastNetWarnAt = 0;
+
+function drawSparkline(canvas, data, color) {
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+  const nums = data.filter(v => typeof v === 'number');
+  if (nums.length < 2) return;
+  let min = Math.min(...nums), max = Math.max(...nums);
+  if (min === max) { min -= 1; max += 1; }
+  const pad = 6;
+  const stepX = (w - pad * 2) / Math.max(1, data.length - 1);
+  ctx.beginPath();
+  let started = false;
+  let lastX = pad, lastY = h - pad;
+  data.forEach((v, i) => {
+    const x = pad + i * stepX;
+    if (typeof v !== 'number') { started = false; return; }
+    const y = h - pad - ((v - min) / (max - min)) * (h - pad * 2);
+    if (!started) { ctx.moveTo(x, y); started = true; } else { ctx.lineTo(x, y); }
+    lastX = x; lastY = y;
+  });
+  ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.stroke();
+  ctx.lineTo(lastX, h - pad);
+  ctx.lineTo(pad, h - pad);
+  ctx.closePath();
+  ctx.fillStyle = color + '22';
+  ctx.fill();
+}
+
+function recordFpsSample(fps) {
+  fpsHistory.push(fps);
+  if (fpsHistory.length > MAX_SAMPLES) fpsHistory.shift();
+  document.getElementById('fpsValue').textContent = fps + ' fps';
+  drawSparkline(document.getElementById('fpsCanvas'), fpsHistory, fps < 30 ? '#e08a8a' : (fps < 50 ? '#f28f29' : '#B4DEBD'));
+}
+
+// Jika Proyektor tidak aktif, tidak ada laporan FPS masuk — tandai sebagai idle
+// alih-alih membiarkan angka lama menggantung dan menyesatkan Operator.
+setInterval(() => {
+  const projectorOpen = !!(projectorWin && !projectorWin.closed);
+  if (!projectorOpen) {
+    document.getElementById('fpsValue').textContent = '-- fps';
+  }
+}, 2500);
+
+async function pingNetwork() {
+  const start = performance.now();
+  try {
+    await fetch('https://www.gstatic.com/generate_204', { mode: 'no-cors', cache: 'no-store' });
+    recordNetSample(Math.round(performance.now() - start));
+  } catch (err) {
+    recordNetSample(null);
+  }
+}
+function recordNetSample(ms) {
+  netHistory.push(ms);
+  if (netHistory.length > MAX_SAMPLES) netHistory.shift();
+  const valEl = document.getElementById('netValue');
+  const miniEl = document.getElementById('netMini');
+  if (ms == null) {
+    valEl.textContent = 'Offline / gagal';
+    miniEl.textContent = '📶 Offline';
+    drawSparkline(document.getElementById('netCanvas'), netHistory, '#e08a8a');
+  } else {
+    valEl.textContent = ms + ' ms';
+    miniEl.textContent = '📶 ' + ms + ' ms';
+    drawSparkline(document.getElementById('netCanvas'), netHistory, ms > 400 ? '#e08a8a' : (ms > 180 ? '#f28f29' : '#B4DEBD'));
+    // Saran optimasi ringan: kalau jaringan lambat dan kualitas manual aktif,
+    // sarankan kembali ke Auto agar pemutaran tetap lancar (tidak dipaksa).
+    const now = Date.now();
+    if (ms > 400 && selectedQuality !== 'auto' && now - lastNetWarnAt > 60000) {
+      lastNetWarnAt = now;
+      toast('Jaringan lambat terdeteksi. Disarankan set Kualitas Video ke Auto agar tetap lancar.', true);
+    }
+  }
+  updateNetExtraInfo();
+}
+function updateNetExtraInfo() {
+  const el = document.getElementById('netExtraInfo');
+  const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+  if (conn) {
+    el.textContent = `Tipe koneksi: ${conn.effectiveType || '—'} · Perkiraan downlink: ${conn.downlink != null ? conn.downlink + ' Mbps' : '—'} · RTT: ${conn.rtt != null ? conn.rtt + ' ms' : '—'}`;
+  } else {
+    el.textContent = 'Info detail koneksi tidak didukung browser ini — grafik di atas memakai tes ping berkala sebagai gambaran latensi jaringan.';
+  }
+}
+setInterval(pingNetwork, 4000);
+
 /* ------------------------------ Global Hotkeys ------------------------------- */
 document.addEventListener('keydown', (e) => {
   const tag = (e.target.tagName || '').toLowerCase();
@@ -1433,6 +1705,9 @@ function init() {
   refreshProjectorStatusUI();
   updateMuteBtn();
   updateCaptionsBtn();
+  updateQualityActiveBadge('—');
+  updateNetExtraInfo();
+  pingNetwork();
   document.getElementById('btnShuffle').classList.toggle('active', !!playerState.shuffle);
   document.getElementById('btnLoop').classList.toggle('active', !!playerState.loop);
   renderPlaylistSelect();

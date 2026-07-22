@@ -1531,6 +1531,20 @@ const LOCAL_ECHO_WINDOW_MS = 350;      // durasi supresi echo pasca command
 const SEEK_JUMP_THRESHOLD_S = 1.5;     // ambang deteksi seek langsung di iframe
 const TIMELINE_TICK_MS = 100;          // ~10Hz update, mulus tanpa jitter
 
+/* --- Optimisasi Beban Operator ---
+   Local Preview di panel Operator SELALU muted dan hanya berfungsi sebagai
+   monitor visual kecil bagi Operator — kualitas gambarnya TIDAK memengaruhi
+   apa yang ditonton audiens (itu tugas Layar Proyektor, yang kualitasnya
+   diatur terpisah lewat `selectedQuality` / panel Kualitas Video).
+   Karena itu preview lokal boleh "dikorbankan" ke resolusi rendah untuk
+   menghemat CPU/GPU/bandwidth Operator, dan Proyektor tetap mendapat
+   prioritas penuh untuk sinkronisasi & kualitas. */
+const LOCAL_PREVIEW_QUALITY = 'small'; // paksa preview lokal ke ~240p (hemat decode & bandwidth)
+function enforceLocalPreviewQuality() {
+  if (!localPlayer) return;
+  try { localPlayer.setPlaybackQuality(LOCAL_PREVIEW_QUALITY); } catch (e) {}
+}
+
 let localPlayer = null;
 let localPlayerReady = false;
 let localPlayerCmdQueue = [];
@@ -1586,6 +1600,7 @@ window.onYouTubeIframeAPIReady = function () {
           localPlayerReady = true;
           try { localPlayer.mute(); } catch (e) {}                // LOCAL SELALU MUTE
           try { localPlayer.setVolume(0); } catch (e) {}
+          enforceLocalPreviewQuality();                            // hemat CPU/GPU: preview lokal dipaksa resolusi rendah
           // Kalau ada video terakhir tersimpan, cue supaya thumbnail-nya tampil
           if (currentVideoId) {
             markLocalEchoSuppressed();
@@ -1622,6 +1637,7 @@ function handleLocalStateChange(e) {
 
   // Update durasi begitu tersedia (buffering/playing pertama kali)
   if (state === 1 || state === 3) {
+    if (state === 3) enforceLocalPreviewQuality(); // buffering = titik paling aman utk paksa ulang kualitas rendah
     try {
       const d = localPlayer.getDuration();
       if (d && d > 0) {
@@ -1675,6 +1691,7 @@ function broadcastLoad(vid, startSeconds) {
     localPlayer.loadVideoById({ videoId: vid, startSeconds: startSeconds || 0 });
     // Local wajib mute setiap kali load ulang (YT kadang unmute internal)
     try { localPlayer.mute(); localPlayer.setVolume(0); } catch (e) {}
+    enforceLocalPreviewQuality();
   });
   sendToProjector('loadVideo', { vid, time: startSeconds || 0 });
 
@@ -1704,6 +1721,22 @@ function broadcastSeek(seconds) {
   // Projector belum punya action 'seek' — kita perluas bridge di bawah.
   sendToProjector('seek', { seconds });
 }
+
+/* --- Hemat CPU/GPU saat tab Operator tidak dilihat.
+   Layar Proyektor punya YT.Player SENDIRI di window terpisah (lihat sekitar
+   baris ~1338), jadi men-pause decode video preview lokal di sini TIDAK
+   memengaruhi playback/sinkronisasi Proyektor sama sekali — hanya preview
+   kecil milik Operator yang berhenti mendekode saat tidak terlihat. */
+document.addEventListener('visibilitychange', () => {
+  if (!localPlayerReady || !localPlayer) return;
+  markLocalEchoSuppressed(); // cegah pause/resume ini ikut ter-forward ke Projector
+  if (document.hidden) {
+    try { localPlayer.pauseVideo(); } catch (e) {}
+  } else {
+    enforceLocalPreviewQuality();
+    if (isPlaying) { try { localPlayer.playVideo(); } catch (e) {} }
+  }
+});
 
 /* --- Timeline update loop: rAF + throttle 100ms.
    Dipause otomatis saat user drag (isTimelineDragging=true) dan saat local
@@ -2060,6 +2093,7 @@ setInterval(() => {
 }, 2500);
 
 async function pingNetwork() {
+  if (document.hidden) return; // hemat bandwidth/CPU: tak perlu ping saat tab tak terlihat
   const start = performance.now();
   try {
     await fetch('https://www.gstatic.com/generate_204', { mode: 'no-cors', cache: 'no-store' });

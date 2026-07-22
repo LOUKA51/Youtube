@@ -90,6 +90,34 @@
     position:absolute; right:14px; top:50%; transform:translateY(-50%);
     opacity:.7; pointer-events:none; font-size:1rem;
   }
+  /* ===== Quota Meter ===== */
+  .quota-pill{
+    display:flex; flex-direction:column; align-items:stretch; gap:5px;
+    min-width:158px; padding:6px 12px 7px; border-radius:14px;
+    border:1px solid #91C4C333; background:#FFF7DD0d;
+    font-size:.72rem; color:var(--text-dim); cursor:pointer;
+    white-space:nowrap; transition:border-color .2s ease, background .2s ease;
+  }
+  .quota-pill:hover{ border-color:var(--border); background:#FFF7DD1a; }
+  .quota-pill .q-row{ display:flex; align-items:baseline; justify-content:space-between; gap:10px; }
+  .quota-pill .q-label{ letter-spacing:.3px; }
+  .quota-pill .q-num{ font-weight:700; color:var(--text); font-variant-numeric:tabular-nums; }
+  .quota-bar{
+    position:relative; height:4px; border-radius:999px;
+    background:#FFF7DD1f; overflow:hidden;
+  }
+  .quota-bar > i{
+    position:absolute; inset:0; display:block; border-radius:999px;
+    background:var(--success); transform-origin:left center;
+    transform:scaleX(1); will-change:transform;
+    transition: transform .35s cubic-bezier(.4,0,.2,1), background .25s ease;
+  }
+  .quota-pill.warn .q-num{ color:var(--orange); }
+  .quota-pill.warn .quota-bar > i{ background:var(--orange); }
+  .quota-pill.crit .q-num{ color:var(--danger); }
+  .quota-pill.crit .quota-bar > i{ background:var(--danger); }
+  @media (prefers-reduced-motion: reduce){ .quota-bar > i{ transition:none; } }
+
   .api-status{
     display:flex; align-items:center; gap:8px;
     font-size:.8rem; color:var(--text-dim);
@@ -488,6 +516,10 @@
 <div class="topbar">
   <div class="logo"><span class="dot" id="projLed"></span> Yume Player · Operator</div>
   <div class="spacer"></div>
+  <button class="quota-pill" id="quotaBtn" title="Estimasi sisa kuota YouTube Data API v3 hari ini. Klik untuk mengatur ulang / mengubah batas harian.">
+    <span class="q-row"><span class="q-label">Sisa Kuota API</span><span class="q-num" id="quotaNum">—</span></span>
+    <span class="quota-bar"><i id="quotaBarFill"></i></span>
+  </button>
   <button class="api-status" id="apiStatusBtn" title="Klik untuk atur API Key">
     <span class="led" id="apiLed"></span>
     <span id="apiStatusText">API belum diatur</span>
@@ -681,11 +713,15 @@
       <div class="kb-row"><span class="kb-key">Enter</span><span class="kb-desc">Kirim teks dari TypingBox &amp; tampilkan pop-up oranye di Layar Proyektor</span></div>
       <div class="kb-row"><span class="kb-key">T</span><span class="kb-desc">Sembunyikan pop-up teks di Layar Proyektor</span></div>
       <div class="kb-row"><span class="kb-key">I</span><span class="kb-desc">Tampilkan / sembunyikan panduan hotkeys ini</span></div>
-      <div class="kb-row"><span class="kb-key">P</span><span class="kb-desc">Toggle Play / Pause video</span></div>
+      <div class="kb-row"><span class="kb-key">Spasi</span><span class="kb-desc">Toggle Play / Pause video (tidak aktif saat mengetik)</span></div>
+      <div class="kb-row"><span class="kb-key">P</span><span class="kb-desc">Toggle Play / Pause video (alternatif Spasi)</span></div>
+      <div class="kb-row"><span class="kb-key">Ctrl + Alt + ←</span><span class="kb-desc">Video sebelumnya — tetap aktif walau sedang mengetik</span></div>
+      <div class="kb-row"><span class="kb-key">Ctrl + Alt + →</span><span class="kb-desc">Video berikutnya — tetap aktif walau sedang mengetik</span></div>
       <div class="kb-row"><span class="kb-key">→</span><span class="kb-desc">Lompat ke video berikutnya (Next)</span></div>
       <div class="kb-row"><span class="kb-key">←</span><span class="kb-desc">Kembali ke video sebelumnya (Previous)</span></div>
       <div class="kb-row"><span class="kb-key">M</span><span class="kb-desc">Toggle Mute / Unmute suara</span></div>
       <div class="kb-row"><span class="kb-key">C</span><span class="kb-desc">Aktifkan / nonaktifkan Subtitle (Closed Caption)</span></div>
+      <div class="kb-row"><span class="kb-key">Ctrl + Alt + D</span><span class="kb-desc">Tambahkan video teratas hasil pencarian ke playlist aktif — atau impor seluruh playlist bila toggle "Import Seluruh Playlist" aktif dan kolom berisi link playlist</span></div>
       <div class="kb-row"><span class="kb-key">Ctrl + Q</span><span class="kb-desc">Fokus ke kolom pencarian &amp; sorot teks lama (Cmd + Q di macOS)</span></div>
     </div>
     <div class="modal-actions">
@@ -709,7 +745,8 @@ const STORAGE_KEYS = {
   VIDEOS: 'yume_videos',             // { [videoId]: { id, title, channel, thumb } }
   ACTIVE_PLAYLIST: 'yume_active_playlist',
   PLAYER_STATE: 'yume_player_state', // { videoId, time, volume, loop, shuffle }
-  SEARCH_CACHE: 'yume_search_cache'  // { [query]: { ts, items } }
+  SEARCH_CACHE: 'yume_search_cache', // { [query]: { ts, items } }
+  QUOTA: 'yume_api_quota'            // { day: 'YYYY-MM-DD' (waktu Pasifik), used, limit }
   // API key is intentionally NOT persisted — session-only, in-memory variable.
 };
 const SEARCH_CACHE_TTL = 1000 * 60 * 10; // 10 minutes
@@ -785,6 +822,104 @@ const searchState = {
   abort: null,               // AbortController request yang sedang berjalan
   importing: false           // guard agar impor playlist tidak dobel
 };
+
+/* ------------------------- Quota Meter (estimasi lokal) --------------------
+   PENTING: YouTube Data API v3 TIDAK menyediakan endpoint untuk membaca sisa
+   kuota. Angka di bawah adalah HITUNGAN LOKAL: setiap pemanggilan API dicatat
+   sesuai tarif resmi Google, lalu dikurangkan dari batas harian.
+   Tarif: search.list = 100 unit; videos.list / playlistItems.list /
+   playlists.list = 1 unit. Kuota di-reset otomatis tengah malam Pasifik (PT).
+   -------------------------------------------------------------------------- */
+const QUOTA_COST = { search: 100, videos: 1, playlistItems: 1, playlists: 1 };
+const QUOTA_DEFAULT_LIMIT = 10000;
+
+const QuotaMeter = {
+  data: null,
+
+  // Tanggal aktif menurut zona Pasifik — patokan reset kuota Google.
+  today() {
+    try {
+      return new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/Los_Angeles', year: 'numeric', month: '2-digit', day: '2-digit'
+      }).format(new Date());
+    } catch {
+      return new Date().toISOString().slice(0, 10); // fallback: UTC
+    }
+  },
+
+  load() {
+    const d = Store.get(STORAGE_KEYS.QUOTA, null);
+    const day = this.today();
+    if (!d || d.day !== day) {
+      this.data = { day, used: 0, limit: (d && d.limit) || QUOTA_DEFAULT_LIMIT };
+      Store.set(STORAGE_KEYS.QUOTA, this.data);
+    } else {
+      this.data = {
+        day: d.day,
+        used: Number(d.used) || 0,
+        limit: Number(d.limit) > 0 ? Number(d.limit) : QUOTA_DEFAULT_LIMIT
+      };
+    }
+    return this.data;
+  },
+
+  // Dipanggil TEPAT SEBELUM fetch, agar request yang gagal di tengah jalan
+  // tetap terhitung (Google juga menagih request yang error 4xx/5xx).
+  spend(kind, times = 1) {
+    this.load(); // sekaligus menangani pergantian hari saat aplikasi dibiarkan menyala
+    const cost = (QUOTA_COST[kind] || 1) * Math.max(1, times);
+    this.data.used += cost;
+    Store.set(STORAGE_KEYS.QUOTA, this.data);
+    this.render();
+    return cost;
+  },
+
+  remaining() { this.load(); return Math.max(0, this.data.limit - this.data.used); },
+
+  // Peringatan lunak: estimasi bisa meleset (API key dipakai perangkat lain,
+  // atau proyek Google Cloud punya batas berbeda), jadi request tidak diblokir.
+  warnIfLow(cost) {
+    const left = this.remaining();
+    if (left <= 0) toast('Estimasi kuota API harian sudah habis. Error 403 sangat mungkin terjadi.', true);
+    else if (left < cost * 3) toast(`Sisa estimasi kuota tinggal ${left} unit.`, true);
+  },
+
+  render() {
+    const d = this.load();
+    const left = Math.max(0, d.limit - d.used);
+    const pct = d.limit > 0 ? left / d.limit : 0;
+    const pill = document.getElementById('quotaBtn');
+    const num = document.getElementById('quotaNum');
+    const fill = document.getElementById('quotaBarFill');
+    if (!pill) return;
+    num.textContent = `${left.toLocaleString('id-ID')} / ${d.limit.toLocaleString('id-ID')}`;
+    fill.style.transform = `scaleX(${pct.toFixed(4)})`;
+    pill.classList.toggle('warn', pct <= 0.25 && pct > 0.08);
+    pill.classList.toggle('crit', pct <= 0.08);
+    pill.title = `Estimasi lokal — YouTube tidak menyediakan API pembacaan kuota.\n`
+      + `Terpakai hari ini (${d.day}, waktu Pasifik): ${d.used.toLocaleString('id-ID')} unit.\n`
+      + `search=100 · videos/playlistItems/playlists=1 unit.\nKlik untuk atur ulang atau ubah batas harian.`;
+  }
+};
+
+// Klik pill: reset penghitung dan/atau ubah batas harian.
+document.getElementById('quotaBtn').addEventListener('click', () => {
+  const d = QuotaMeter.load();
+  const input = prompt(
+    'Batas kuota harian (unit). Kosongkan untuk memakai nilai sekarang.\n'
+    + 'Menekan OK akan MENGATUR ULANG penghitung terpakai ke 0.',
+    String(d.limit)
+  );
+  if (input === null) return;
+  const val = parseInt(String(input).replace(/[^0-9]/g, ''), 10);
+  QuotaMeter.data = { day: QuotaMeter.today(), used: 0, limit: val > 0 ? val : d.limit };
+  Store.set(STORAGE_KEYS.QUOTA, QuotaMeter.data);
+  QuotaMeter.render();
+  toast('Penghitung kuota diatur ulang');
+});
+
+// Sinkronkan tampilan bila hari berganti saat aplikasi dibiarkan menyala semalaman.
+setInterval(() => QuotaMeter.render(), 60000);
 
 /* --------------------------- API status UI -------------------------------- */
 function refreshApiStatusUI() {
@@ -1183,6 +1318,7 @@ async function runSearch(query, isNewSearch = true) {
     const parsed = isNewSearch ? parseYouTubeInput(query) : { isLink: false };
     if (parsed.isLink && parsed.videoId) {
       const url = `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${encodeURIComponent(parsed.videoId)}&key=${apiKey}`;
+      QuotaMeter.spend('videos');
       const res = await fetch(url, { signal: controller.signal });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error?.message || 'Gagal mengambil data video');
@@ -1211,6 +1347,8 @@ async function runSearch(query, isNewSearch = true) {
       const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&videoCategoryId=10${durParam}`
         + `&order=${searchState.order}&maxResults=25&q=${encodeURIComponent(musicQuery)}`
         + `${pageToken ? `&pageToken=${pageToken}` : ''}&key=${apiKey}`;
+      QuotaMeter.warnIfLow(QUOTA_COST.search);
+      QuotaMeter.spend('search');
       const res = await fetch(url, { signal: controller.signal });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error?.message || 'Gagal mengambil hasil pencarian');
@@ -1260,6 +1398,14 @@ async function runSearch(query, isNewSearch = true) {
 }
 
 /* ---------------- Impor seluruh playlist YouTube (toggle ON) ---------------- */
+// Mengembalikan playlist lokal yang berasal dari playlistId YouTube yang sama.
+// Fallback pencocokan nama sengaja TIDAK dipakai: nama boleh diubah operator,
+// hanya sourcePlaylistId yang menjadi kunci identitas yang sah.
+function findPlaylistBySource(ytPlaylistId) {
+  if (!ytPlaylistId) return null;
+  return Object.values(playlists).find(pl => pl.sourcePlaylistId === ytPlaylistId) || null;
+}
+
 async function importPlaylistFromUrl(playlistId, sourceQuery) {
   if (!apiKey) {
     toast('Atur YouTube API key terlebih dahulu', true);
@@ -1267,6 +1413,21 @@ async function importPlaylistFromUrl(playlistId, sourceQuery) {
     return;
   }
   if (searchState.importing) return;
+
+  // GUARD ANTI-DUPLIKAT — dijalankan SEBELUM request apa pun, sehingga impor
+  // ulang playlist yang sama berbiaya 0 unit kuota.
+  const existing = findPlaylistBySource(playlistId);
+  if (existing) {
+    if (activePlaylistId !== existing.id) {
+      activePlaylistId = existing.id;
+      Store.set(STORAGE_KEYS.ACTIVE_PLAYLIST, activePlaylistId);
+      renderPlaylistSelect();
+      renderPlaylistList();
+    }
+    toast(`Sudah pernah diimpor: "${existing.name}" (${existing.videoIds.length} video)`);
+    return;
+  }
+
   searchState.importing = true;
   toast('Mengimpor playlist dari YouTube...');
 
@@ -1274,6 +1435,7 @@ async function importPlaylistFromUrl(playlistId, sourceQuery) {
     // 1 unit: ambil judul playlist untuk penamaan
     let plName = '';
     try {
+      QuotaMeter.spend('playlists');
       const metaRes = await fetch(`https://www.googleapis.com/youtube/v3/playlists?part=snippet&id=${encodeURIComponent(playlistId)}&key=${apiKey}`);
       const metaData = await metaRes.json();
       if (metaRes.ok) plName = metaData.items?.[0]?.snippet?.title || '';
@@ -1286,6 +1448,7 @@ async function importPlaylistFromUrl(playlistId, sourceQuery) {
     for (let page = 0; page < PLAYLIST_IMPORT_MAX_PAGES; page++) {
       const url = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${encodeURIComponent(playlistId)}`
         + `&maxResults=50${token ? `&pageToken=${token}` : ''}&key=${apiKey}`;
+      QuotaMeter.spend('playlistItems');
       const res = await fetch(url);
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error?.message || 'Gagal mengambil isi playlist');
@@ -1320,7 +1483,8 @@ async function importPlaylistFromUrl(playlistId, sourceQuery) {
     Store.set(STORAGE_KEYS.VIDEOS, videos);
 
     const newId = 'pl_' + Date.now();
-    playlists[newId] = { id: newId, name: plName, videoIds: unique.map(v => v.id) };
+    // sourcePlaylistId = sidik jari asal impor; dipakai findPlaylistBySource()
+    playlists[newId] = { id: newId, name: plName, sourcePlaylistId: playlistId, videoIds: unique.map(v => v.id) };
     Store.set(STORAGE_KEYS.PLAYLISTS, playlists);
     activePlaylistId = newId;
     Store.set(STORAGE_KEYS.ACTIVE_PLAYLIST, activePlaylistId);
@@ -2217,6 +2381,61 @@ function updateNetExtraInfo() {
 setInterval(pingNetwork, 4000);
 
 /* ------------------------------ Global Hotkeys ------------------------------- */
+// Satu sumber kebenaran untuk toggle Play/Pause (dipakai tombol P dan Spasi),
+// supaya `isPlaying` tidak pernah bercabang di dua tempat.
+function togglePlayPause() {
+  if (!currentVideoId) { toast('Belum ada video yang dimuat', true); return; }
+  if (isPlaying) {
+    broadcastPause();
+    isPlaying = false;
+  } else {
+    ensureProjectorReady();
+    broadcastPlay();
+    isPlaying = true;
+  }
+  updatePlayPauseBtn();
+}
+
+/* --------- Ctrl+Alt+D: tambah cepat hasil teratas / impor playlist --------- */
+let quickAddBusy = false; // guard: tahan-tekan tidak boleh memicu antrean request
+async function quickAddTopResult() {
+  if (quickAddBusy) return;
+  quickAddBusy = true;
+  try {
+    const q = document.getElementById('searchInput').value.trim();
+    const importAll = document.getElementById('chkImportPlaylist').checked;
+    const parsed = parseYouTubeInput(q);
+
+    // Mode A — toggle ON + link playlist: impor seluruh playlist.
+    // importPlaylistFromUrl() sudah punya guard anti-duplikat sendiri.
+    if (importAll && parsed.isLink && parsed.playlistId) {
+      await importPlaylistFromUrl(parsed.playlistId, q);
+      return;
+    }
+
+    // Mode B — tambahkan video teratas dari daftar hasil pencarian.
+    if (!playlists[activePlaylistId]) { toast('Tidak ada playlist aktif', true); return; }
+
+    let topId = searchResults[0];
+
+    // Daftar masih kosong tapi kolom cari terisi: selesaikan pencariannya dulu.
+    if (!topId && q) {
+      if (parsed.isLink && parsed.playlistId && !parsed.videoId && !importAll) {
+        toast('Ini link playlist. Aktifkan "Import Seluruh Playlist" lebih dulu.', true);
+        return;
+      }
+      clearTimeout(debounceTimer);
+      await runSearch(q, true);
+      topId = searchResults[0];
+    }
+
+    if (!topId) { toast('Belum ada hasil pencarian untuk ditambahkan', true); return; }
+    addToActivePlaylist(topId);
+  } finally {
+    quickAddBusy = false;
+  }
+}
+
 // Ctrl+Q / Cmd+Q: fokus + seleksi teks pada kolom pencarian.
 // Didaftarkan pada fase CAPTURE agar tetap jalan meski fokus sedang di input lain.
 document.addEventListener('keydown', (e) => {
@@ -2227,6 +2446,25 @@ document.addEventListener('keydown', (e) => {
     const si = document.getElementById('searchInput');
     si.focus();
     si.select();
+    return;
+  }
+
+  // Ctrl + Alt + D: masukkan hasil teratas ke playlist aktif. Bila toggle
+  // "Import Seluruh Playlist" aktif DAN kolom cari berisi link playlist,
+  // aksi ini beralih menjadi impor seluruh playlist.
+  if (e.ctrlKey && e.altKey && (e.key || '').toLowerCase() === 'd') {
+    e.preventDefault();
+    e.stopPropagation();
+    quickAddTopResult();
+    return;
+  }
+
+  // Ctrl + Alt + Panah Kiri/Kanan: pindah trek. Sengaja di fase capture supaya
+  // tetap berfungsi walau kursor sedang berada di TypingBox atau kolom cari.
+  if (e.ctrlKey && e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.key === 'ArrowLeft') playPrev(); else playNext();
   }
 }, true);
 
@@ -2234,22 +2472,24 @@ document.addEventListener('keydown', (e) => {
   const tag = (e.target.tagName || '').toLowerCase();
   if (tag === 'input' || tag === 'textarea') return; // Enter-in-typingBox handled above
   const key = e.key.toLowerCase();
+
+  // SPASI = Play / Pause. Diblokir saat fokus berada di <button> atau <select>
+  // karena browser memakai Spasi untuk mengaktifkan elemen tersebut — tanpa
+  // penjagaan ini satu tekanan akan memicu toggle dua kali.
+  if (e.code === 'Space' || e.key === ' ') {
+    if (tag === 'button' || tag === 'select' || e.target.isContentEditable) return;
+    e.preventDefault();
+    togglePlayPause();
+    return;
+  }
+
   if (key === 't') {
     sendToProjector('hideText');
   } else if (key === 'i') {
     toggleKeybindModal();
   } else if (key === 'p') {
     e.preventDefault();
-    if (!currentVideoId) return;
-    if (isPlaying) {
-      broadcastPause();
-      isPlaying = false;
-    } else {
-      ensureProjectorReady();
-      broadcastPlay();
-      isPlaying = true;
-    }
-    updatePlayPauseBtn();
+    togglePlayPause();
   } else if (e.key === 'ArrowRight') {
     e.preventDefault();
     playNext();
@@ -2267,6 +2507,7 @@ document.addEventListener('keydown', (e) => {
 
 /* ------------------------------ Init ----------------------------------------- */
 function init() {
+  QuotaMeter.render();
   refreshApiStatusUI();
   refreshProjectorStatusUI();
   updateMuteBtn();

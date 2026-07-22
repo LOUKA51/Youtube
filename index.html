@@ -36,16 +36,13 @@
       url('https://raw.githubusercontent.com/LOUKA51/Youtube/refs/heads/main/1366762.webp') center/cover no-repeat;
     filter: blur(18px);
   }
-
   ::selection{ background:var(--accent); color:#0b0d12; }
   ::-webkit-scrollbar{ width:8px; }
   ::-webkit-scrollbar-thumb{ background:var(--border); border-radius:8px; }
   ::-webkit-scrollbar-track{ background:transparent; }
-
   a{ color:inherit; }
   button{ font-family:inherit; cursor:pointer; border:none; }
   input{ font-family:inherit; }
-
   .glass{
     background:var(--panel-bg);
     backdrop-filter: blur(20px) saturate(180%);
@@ -54,7 +51,6 @@
     border-radius:18px;
     box-shadow: 0 8px 32px rgba(0,0,0,0.35);
   }
-
   /* ===== TOP BAR ===== */
   .topbar{
     position:sticky; top:0; z-index:50;
@@ -102,7 +98,6 @@
   .api-status:hover{ background:#FFF7DD1a; }
   .api-status .led{ width:8px; height:8px; border-radius:50%; background:var(--danger); }
   .api-status.ok .led{ background:var(--success); box-shadow:0 0 6px var(--success); }
-
   /* ===== MAIN LAYOUT ===== */
   .app{
     display:grid;
@@ -115,7 +110,6 @@
   @media (max-width: 1080px){
     .app{ grid-template-columns:1fr; }
   }
-
   /* ===== LEFT: OPERATOR CONTROL COL (no local video player) ===== */
   .player-col{ display:flex; flex-direction:column; gap:16px; }
   .nowplaying{ padding:16px; display:flex; gap:16px; align-items:center; }
@@ -127,7 +121,6 @@
   .nowplaying h2{ font-size:1.1rem; font-weight:700; line-height:1.35; margin-bottom:6px; text-shadow:0 2px 10px rgba(0,0,0,0.5); }
   .nowplaying .channel{ color:var(--text-dim); font-size:.85rem; }
   .nowplaying .np-empty{ color:var(--text-dim); font-size:.9rem; }
-
   .controls-row{
     display:flex; align-items:center; gap:10px; flex-wrap:wrap;
     padding:14px;
@@ -145,7 +138,6 @@
   .spacer{ flex:1; }
   .volume-row{ display:flex; align-items:center; gap:8px; color:var(--text-dim); font-size:.85rem; }
   .volume-row input[type=range]{ width:100px; accent-color:var(--accent); }
-
   .quality-row{
     display:flex; align-items:center; gap:10px; flex-wrap:wrap;
     padding:12px 14px;
@@ -158,7 +150,6 @@
   .quality-row select option{ background:#1a1e26; color:var(--text); }
   .quality-active{ font-size:.78rem; color:var(--text-dim); white-space:nowrap; }
   .net-mini{ font-size:.78rem; color:var(--text-dim); white-space:nowrap; }
-
   .typing-row{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:14px; }
   .typing-row input[type=text]{
     flex:1; min-width:180px; padding:10px 14px;
@@ -166,7 +157,6 @@
     color:var(--text); font-size:.88rem; outline:none; transition:.2s ease;
   }
   .typing-row input[type=text]:focus{ border-color:var(--accent); background:#FFF7DD1f; box-shadow:0 0 0 3px #80A1BA33; }
-
   .playlist-select{
     display:flex; align-items:center; gap:10px; flex-wrap:wrap;
     padding:14px;
@@ -183,7 +173,6 @@
     font-size:1rem; transition:.15s;
   }
   .icon-btn:hover{ background:var(--accent); color:#0b0d12; border-color:var(--accent); }
-
   /* ===== PROJECTOR PANEL ===== */
   .projector-panel{ padding:16px; display:flex; flex-direction:column; gap:12px; }
   .projector-panel h3{ font-size:.95rem; font-weight:700; letter-spacing:.3px; text-shadow:0 2px 10px rgba(0,0,0,0.5); }
@@ -197,7 +186,6 @@
   .proj-status{ display:flex; align-items:center; gap:8px; font-size:.8rem; color:var(--text-dim); }
   .proj-status .led{ width:8px; height:8px; border-radius:50%; background:var(--danger); }
   .proj-status.ok .led{ background:var(--success); box-shadow:0 0 6px var(--success); }
-
   /* ===== RIGHT: SIDEBAR (Playlist & Search shown simultaneously, no tabs) ===== */
   .side-col{ display:flex; flex-direction:column; gap:16px; min-width:0; }
   .panel{ padding:16px; display:flex; flex-direction:column; gap:12px; }
@@ -207,15 +195,12 @@
     font-size:.72rem; color:#0b0d12; background:var(--success);
     padding:2px 9px; border-radius:999px; font-weight:700;
   }
-
   .list{ display:flex; flex-direction:column; gap:8px; max-height:38vh; overflow-y:auto; padding-right:2px; }
   .state-msg{ color:var(--text-dim); font-size:.85rem; text-align:center; padding:24px 10px; }
-
   /* Box Hasil Pencarian: satu box berisi input pencarian + filter/sort + hasil */
   .search-panel .list{ max-height:64vh; }
   /* Box Playlist diperbesar */
   #playlistList{ max-height:60vh; }
-
   /* ===== Kontrol Filter / Sort / View Toggle (di dalam box Hasil Pencarian) ===== */
   .search-box{ position:relative; }
   .search-box input{
@@ -226,7 +211,6 @@
   .search-box input::placeholder{ color:var(--text-dim); }
   .search-box input:focus{ border-color:var(--accent); background:#FFF7DD1f; box-shadow:0 0 0 3px #80A1BA33; }
   .search-box .icon{ position:absolute; right:14px; top:50%; transform:translateY(-50%); opacity:.7; font-size:1rem; pointer-events:none; }
-
   .search-controls{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
   .search-controls select{
     background:#FFF7DD12; border:1px solid var(--border); color:var(--text);
@@ -241,7 +225,6 @@
   }
   .view-toggle button:hover{ color:var(--text); border-color:var(--border); }
   .view-toggle button.active{ background:var(--accent); color:#0b0d12; border-color:var(--accent); }
-
   .item{
     display:flex; gap:10px; padding:8px; border-radius:12px;
     background:var(--card-bg); border:1px solid transparent;
@@ -262,7 +245,6 @@
   .item .badge-playing .bar:nth-child(2){ animation-delay:.2s; }
   .item .badge-playing .bar:nth-child(3){ animation-delay:.4s; }
   @keyframes eq{ 0%,100%{ transform:scaleY(.4);} 50%{ transform:scaleY(1);} }
-
   .item-actions{ display:flex; flex-direction:column; gap:4px; justify-content:center; }
   .item-actions button{
     width:26px; height:26px; border-radius:7px; background:#FFF7DD14; color:var(--text);
@@ -270,7 +252,6 @@
   }
   .item-actions button:hover{ background:var(--accent); color:#0b0d12; }
   .item-actions button.danger:hover{ background:var(--danger); color:#0b0d12; }
-
   /* ===== Grid View (Hasil Pencarian) ===== */
   .list.grid-view{
     display:grid;
@@ -300,12 +281,9 @@
   }
   .list.grid-view .state-msg,
   .list.grid-view .list-loading{ grid-column:1 / -1; }
-
   .list-loading{ text-align:center; color:var(--text-dim); font-size:.78rem; padding:12px 10px; }
-
   .skel{ background:linear-gradient(90deg, #FFF7DD10 25%, #FFF7DD22 37%, #FFF7DD10 63%); background-size:400% 100%; animation:shimmer 1.4s ease infinite; border-radius:8px; }
   @keyframes shimmer{ 0%{background-position:100% 0;} 100%{background-position:0 0;} }
-
   /* ===== MODAL ===== */
   .modal-overlay{
     position:fixed; inset:0; background:#0b0d12b3; backdrop-filter:blur(6px);
@@ -328,7 +306,6 @@
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
   }
   .kb-desc{ font-size:.82rem; color:var(--text-dim); }
-
   .toast-wrap{ position:fixed; bottom:20px; right:20px; z-index:200; display:flex; flex-direction:column; gap:8px; }
   .toast{
     padding:11px 16px; border-radius:10px; font-size:.85rem; font-weight:600; color:#0b0d12;
@@ -336,7 +313,6 @@
   }
   .toast.err{ background:var(--danger); }
   @keyframes toastin{ from{ opacity:0; transform:translateY(8px);} to{ opacity:1; transform:translateY(0);} }
-
   /* ===== BOX BARU: Kondisi FPS & Jaringan (bagian paling bawah Panel Operator) ===== */
   .stats-wrap{ max-width:1600px; margin:0 auto; padding:0 20px 20px; }
   .stats-panel{ padding:16px; display:flex; flex-direction:column; gap:12px; }
@@ -350,14 +326,11 @@
     width:100%; height:80px; display:block; border-radius:10px;
     background:#FFF7DD0d; border:1px solid #91C4C333;
   }
-
   .hidden{ display:none !important; }
-
   footer{ text-align:center; padding:18px; color:var(--text-dim); font-size:.75rem; }
 </style>
 </head>
 <body>
-
 <div class="topbar">
   <div class="logo"><span class="dot" id="projLed"></span> Yume Player · Operator</div>
   <div class="spacer"></div>
@@ -366,9 +339,7 @@
     <span id="apiStatusText">API belum diatur</span>
   </button>
 </div>
-
 <div class="app">
-
   <!-- LEFT: OPERATOR CONTROL -->
   <div class="player-col">
     <div class="glass nowplaying">
@@ -379,7 +350,6 @@
         <div class="channel" id="nowChannel">—</div>
       </div>
     </div>
-
     <div class="glass controls-row">
       <button class="ctrl-btn play-main" id="btnPlayPause">▶ Play</button>
       <button class="ctrl-btn" id="btnPrev">⏮ Prev</button>
@@ -393,7 +363,6 @@
         🔊 <input type="range" id="volumeSlider" min="0" max="100" value="80">
       </div>
     </div>
-
     <div class="glass quality-row">
       <span class="quality-label">🎞️ Kualitas Video</span>
       <select id="qualitySelect">
@@ -403,19 +372,16 @@
       <div class="spacer"></div>
       <span class="net-mini" id="netMini" title="Latensi jaringan saat ini">📶 —</span>
     </div>
-
     <div class="glass typing-row">
       <input type="text" id="typingBox" placeholder="Ketik teks untuk Layar Proyektor... (Enter untuk kirim)" autocomplete="off">
       <button class="ctrl-btn play-main" id="btnSendText">📢 Kirim</button>
       <button class="ctrl-btn" id="btnHideText" title="Sembunyikan (T)">🙈 Sembunyikan</button>
     </div>
-
     <div class="glass playlist-select">
       <select id="playlistSelect"></select>
       <button class="icon-btn" id="btnNewPlaylist" title="Buat playlist baru">＋</button>
       <button class="icon-btn" id="btnDeletePlaylist" title="Hapus playlist ini">🗑</button>
     </div>
-
     <div class="glass panel search-panel">
       <div class="panel-head">
         <h3>🔎 Hasil Pencarian</h3>
@@ -449,7 +415,6 @@
       <div class="list" id="searchList"></div>
     </div>
   </div>
-
   <!-- RIGHT: SIDEBAR — Playlist & tombol Layar Proyektor -->
   <div class="side-col">
     <div class="glass panel">
@@ -459,7 +424,6 @@
       </div>
       <div class="list" id="playlistList"></div>
     </div>
-
     <div class="glass projector-panel">
       <div class="panel-head">
         <h3>🖥️ Layar Proyektor</h3>
@@ -469,9 +433,7 @@
       <p class="hint">Menekan <b>Play</b> otomatis membuka Layar Proyektor dalam mode layar penuh jika belum aktif. Sinkronisasi satu arah Operator → Proyektor via <code>window.open()</code>, tanpa server. Menutup tab Operator akan otomatis menutup Layar Proyektor juga. Tekan <b>I</b> untuk panduan hotkeys lengkap.</p>
     </div>
   </div>
-
 </div>
-
 <div class="stats-wrap">
   <div class="glass panel stats-panel">
     <div class="panel-head">
@@ -496,11 +458,8 @@
     <p class="hint" id="netExtraInfo">Mengukur kondisi jaringan...</p>
   </div>
 </div>
-
 <footer>Yume Player — pemutar YouTube personal · dibuat untuk penggunaan pribadi</footer>
-
 <div id="toastWrap" class="toast-wrap"></div>
-
 <!-- SETTINGS MODAL -->
 <div class="modal-overlay hidden" id="settingsModal">
   <div class="glass modal">
@@ -514,7 +473,6 @@
     </div>
   </div>
 </div>
-
 <!-- NEW PLAYLIST MODAL -->
 <div class="modal-overlay hidden" id="newPlaylistModal">
   <div class="glass modal">
@@ -526,7 +484,6 @@
     </div>
   </div>
 </div>
-
 <!-- KEYBIND MODAL -->
 <div class="modal-overlay hidden" id="keybindModal">
   <div class="glass modal">
@@ -546,17 +503,12 @@
     </div>
   </div>
 </div>
-
 <script>
-/* =========================================================================
-   YUME PLAYER — OPERATOR CONSOLE (Anime Glassmorphism Edition)
-   Vanilla JS, LocalStorage persistence, YouTube Data API v3 search.
-   The Operator window holds NO video player. It opens a Projector window
-   (window.open + document.write, single-file, no server) which owns the
-   real YT.Player instance. Sync is one-way: Operator -> Projector, via a
-   direct reference to window.YumeProjector on the popup (no BroadcastChannel).
-   ========================================================================= */
-
+/* YUME PLAYER — OPERATOR CONSOLE (Anime Glassmorphism Edition). Vanilla JS,
+   LocalStorage persistence, YouTube Data API v3 search. Operator window has
+   NO video player; it opens a Projector window (window.open+document.write,
+   single-file, no server) which owns the real YT.Player. Sync is one-way:
+   Operator -> Projector via direct ref to window.YumeProjector (no BroadcastChannel). */
 const STORAGE_KEYS = {
   PLAYLISTS: 'yume_playlists',       // { [playlistId]: { id, name, videoIds: [] } }
   VIDEOS: 'yume_videos',             // { [videoId]: { id, title, channel, thumb } }
@@ -569,7 +521,6 @@ const SEARCH_CACHE_TTL = 1000 * 60 * 10; // 10 minutes
 const DEBOUNCE_MS = 550;
 const FALLBACK_THUMB = 'https://raw.githubusercontent.com/LOUKA51/Youtube/refs/heads/main/Thumbnail.webp';
 const PROJECTOR_BLUR = 20; // locked permanently — no operator-facing slider anymore
-
 /* ---------------------------- Storage helpers ---------------------------- */
 const Store = {
   get(key, fallback) {
@@ -582,7 +533,6 @@ const Store = {
     try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) { console.error('Storage full or blocked', e); }
   }
 };
-
 /* ------------------------------- Toasts ---------------------------------- */
 function toast(msg, isErr = false) {
   const wrap = document.getElementById('toastWrap');
@@ -592,18 +542,15 @@ function toast(msg, isErr = false) {
   wrap.appendChild(el);
   setTimeout(() => el.remove(), 3200);
 }
-
 /* ------------------------------ App State --------------------------------- */
 let apiKey = ''; // session-only, never persisted
 let playlists = Store.get(STORAGE_KEYS.PLAYLISTS, null);
 let videos = Store.get(STORAGE_KEYS.VIDEOS, {});
 let activePlaylistId = Store.get(STORAGE_KEYS.ACTIVE_PLAYLIST, null);
 let playerState = Store.get(STORAGE_KEYS.PLAYER_STATE, { videoId: null, time: 0, volume: 80, loop: false, shuffle: false });
-// Subtitle/Closed Caption SENGAJA tidak disimpan ke localStorage: setiap kali
-// halaman Operator dibuka ulang, status Subtitle SELALU OFF secara default.
+// Subtitle SENGAJA tidak disimpan ke localStorage: selalu OFF tiap reload.
 let ccEnabled = false;
 if (playerState.captions === undefined) playerState.captions = false;
-
 if (!playlists) {
   const defaultId = 'pl_' + Date.now();
   playlists = { [defaultId]: { id: defaultId, name: 'Playlist Saya', videoIds: [] } };
@@ -615,13 +562,11 @@ if (!activePlaylistId || !playlists[activePlaylistId]) {
   activePlaylistId = Object.keys(playlists)[0];
   Store.set(STORAGE_KEYS.ACTIVE_PLAYLIST, activePlaylistId);
 }
-
 let currentVideoId = playerState.videoId || null;
 let isPlaying = false;
 let isMuted = false;
 let searchResults = []; // array of videoIds currently shown from last search
 let projectorWin = null;
-
 /* ------------------------- Search state (filter/sort/grid/scroll) ---------- */
 const searchState = {
   query: '',
@@ -633,7 +578,6 @@ const searchState = {
   loading: false,
   exhausted: false
 };
-
 /* --------------------------- API status UI -------------------------------- */
 function refreshApiStatusUI() {
   const btn = document.getElementById('apiStatusBtn');
@@ -646,7 +590,6 @@ function refreshApiStatusUI() {
     text.textContent = 'Atur API Key';
   }
 }
-
 /* --------------------------- Projector status UI --------------------------- */
 function refreshProjectorStatusUI() {
   const el = document.getElementById('projStatus');
@@ -658,12 +601,10 @@ function refreshProjectorStatusUI() {
   dot.classList.toggle('live', open);
 }
 setInterval(refreshProjectorStatusUI, 1500);
-
 /* ------------------------------ Modals ------------------------------------ */
 const settingsModal = document.getElementById('settingsModal');
 const newPlaylistModal = document.getElementById('newPlaylistModal');
 const keybindModal = document.getElementById('keybindModal');
-
 document.getElementById('apiStatusBtn').addEventListener('click', () => {
   document.getElementById('apiKeyInput').value = apiKey || '';
   settingsModal.classList.remove('hidden');
@@ -678,11 +619,9 @@ document.getElementById('btnSaveApiKey').addEventListener('click', () => {
   toast('API Key berhasil diterapkan untuk sesi ini');
 });
 settingsModal.addEventListener('click', (e) => { if (e.target === settingsModal) settingsModal.classList.add('hidden'); });
-
 function toggleKeybindModal() { keybindModal.classList.toggle('hidden'); }
 document.getElementById('btnCloseKeybind').addEventListener('click', () => keybindModal.classList.add('hidden'));
 keybindModal.addEventListener('click', (e) => { if (e.target === keybindModal) keybindModal.classList.add('hidden'); });
-
 document.getElementById('btnNewPlaylist').addEventListener('click', () => {
   document.getElementById('newPlaylistInput').value = '';
   newPlaylistModal.classList.remove('hidden');
@@ -692,7 +631,6 @@ document.getElementById('btnCancelNewPlaylist').addEventListener('click', () => 
 document.getElementById('btnConfirmNewPlaylist').addEventListener('click', createPlaylistFromModal);
 document.getElementById('newPlaylistInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') createPlaylistFromModal(); });
 newPlaylistModal.addEventListener('click', (e) => { if (e.target === newPlaylistModal) newPlaylistModal.classList.add('hidden'); });
-
 function createPlaylistFromModal() {
   const name = document.getElementById('newPlaylistInput').value.trim();
   if (!name) { toast('Nama playlist tidak boleh kosong', true); return; }
@@ -706,7 +644,6 @@ function createPlaylistFromModal() {
   renderPlaylistList();
   toast(`Playlist "${name}" dibuat`);
 }
-
 document.getElementById('btnDeletePlaylist').addEventListener('click', () => {
   const ids = Object.keys(playlists);
   if (ids.length <= 1) { toast('Minimal harus ada satu playlist', true); return; }
@@ -720,7 +657,6 @@ document.getElementById('btnDeletePlaylist').addEventListener('click', () => {
   renderPlaylistList();
   toast('Playlist dihapus');
 });
-
 /* ------------------------------ Playlist select ---------------------------- */
 function renderPlaylistSelect() {
   const sel = document.getElementById('playlistSelect');
@@ -738,7 +674,6 @@ document.getElementById('playlistSelect').addEventListener('change', (e) => {
   Store.set(STORAGE_KEYS.ACTIVE_PLAYLIST, activePlaylistId);
   renderPlaylistList();
 });
-
 /* ------------------------------ Render lists -------------------------------- */
 function videoItemHTML(vid, { showPlaylistActions, showSearchActions, inPlaylistId }) {
   const v = videos[vid];
@@ -765,7 +700,6 @@ function escapeHTML(str) {
   d.textContent = str || '';
   return d.innerHTML;
 }
-
 function renderPlaylistList() {
   renderPlaylistSelect();
   const pl = playlists[activePlaylistId];
@@ -780,7 +714,6 @@ function renderPlaylistList() {
   count.textContent = pl.videoIds.length;
   list.innerHTML = pl.videoIds.map(vid => videoItemHTML(vid, { showPlaylistActions: true, showSearchActions: false, inPlaylistId: pl.id })).join('');
 }
-
 function renderSearchList() {
   const list = document.getElementById('searchList');
   const count = document.getElementById('searchCount');
@@ -800,10 +733,8 @@ function renderSearchList() {
   }
   list.innerHTML = html;
 }
-
 document.getElementById('playlistList').addEventListener('click', handleListClick);
 document.getElementById('searchList').addEventListener('click', handleListClick);
-
 function handleListClick(e) {
   const actionBtn = e.target.closest('[data-action]');
   if (actionBtn) {
@@ -820,7 +751,6 @@ function handleListClick(e) {
     playVideo(vid);
   }
 }
-
 function addToActivePlaylist(vid) {
   const pl = playlists[activePlaylistId];
   if (!pl) return;
@@ -830,7 +760,6 @@ function addToActivePlaylist(vid) {
   renderPlaylistList();
   toast(`Ditambahkan ke "${pl.name}"`);
 }
-
 function removeFromPlaylist(playlistId, vid) {
   const pl = playlists[playlistId];
   if (!pl) return;
@@ -839,7 +768,6 @@ function removeFromPlaylist(playlistId, vid) {
   renderPlaylistList();
   toast('Dihapus dari playlist');
 }
-
 /* ------------------------------ Search (debounced) -------------------------- */
 let debounceTimer = null;
 document.getElementById('searchInput').addEventListener('input', (e) => {
@@ -854,7 +782,6 @@ document.getElementById('searchInput').addEventListener('input', (e) => {
   }
   debounceTimer = setTimeout(() => runSearch(q), DEBOUNCE_MS);
 });
-
 /* --- Filter/Sort/View controls: setiap perubahan memulai pencarian baru --- */
 document.getElementById('sortSelect').addEventListener('change', (e) => {
   searchState.order = e.target.value;
@@ -872,16 +799,12 @@ function setViewMode(mode) {
   document.getElementById('btnViewGrid').classList.toggle('active', mode === 'grid');
   renderSearchList();
 }
-
 function getDurationsForFilter() {
-  // Fokus pada Music (videoCategoryId=10) dan hindari YouTube Shorts dengan hanya
-  // mengambil durasi "medium" (4-20 mnt) dan "long" (>20 mnt) — Shorts selalu
-  // berdurasi jauh di bawah 4 menit sehingga bucket "short" API tidak pernah diambil.
+  // Fokus Music (videoCategoryId=10), hindari Shorts: hanya ambil bucket durasi
+  // "medium" (4-20 mnt) & "long" (>20 mnt) — Shorts selalu <4 mnt jadi tak terambil.
   return searchState.durationFilter === 'all' ? ['medium', 'long'] : [searchState.durationFilter];
 }
-
-// isNewSearch=true -> reset (query/filter/sort baru berubah)
-// isNewSearch=false -> lanjutkan (dipicu oleh unlimited scroll)
+// isNewSearch=true -> reset (query/filter/sort berubah); false -> lanjutkan (unlimited scroll)
 async function runSearch(query, isNewSearch = true) {
   if (!apiKey) {
     toast('Atur YouTube API key terlebih dahulu', true);
@@ -898,11 +821,9 @@ async function runSearch(query, isNewSearch = true) {
   } else if (searchState.exhausted) {
     return;
   }
-
   const durations = getDurationsForFilter();
   searchState.loading = true;
   renderSearchList();
-
   try {
     const musicQuery = `${query} official music video`;
     const requests = durations
@@ -912,16 +833,13 @@ async function runSearch(query, isNewSearch = true) {
         const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&videoCategoryId=10&videoDuration=${dur}&order=${searchState.order}&maxResults=25&q=${encodeURIComponent(musicQuery)}${pageToken ? `&pageToken=${pageToken}` : ''}&key=${apiKey}`;
         return fetch(url).then(res => res.json().then(data => ({ res, data, dur })));
       });
-
     if (requests.length === 0) {
       searchState.exhausted = true;
       searchState.loading = false;
       renderSearchList();
       return;
     }
-
     const results = await Promise.all(requests);
-
     const items = [];
     for (const { res, data, dur } of results) {
       if (!res.ok) {
@@ -941,7 +859,6 @@ async function runSearch(query, isNewSearch = true) {
       // simpan nextPageToken per bucket durasi untuk unlimited scroll berikutnya
       searchState.tokens[dur] = data.nextPageToken || null;
     }
-
     // exhausted jika semua bucket aktif sudah tidak punya nextPageToken
     searchState.exhausted = durations.every(dur => !searchState.tokens[dur]);
     searchState.loading = false;
@@ -956,7 +873,6 @@ async function runSearch(query, isNewSearch = true) {
     toast(err.message, true);
   }
 }
-
 function skeletonHTML(n) {
   let html = '';
   for (let i = 0; i < n; i++) {
@@ -965,7 +881,6 @@ function skeletonHTML(n) {
   }
   return html;
 }
-
 function applySearchResults(items, isNewSearch) {
   items.forEach(v => { videos[v.id] = v; });
   Store.set(STORAGE_KEYS.VIDEOS, videos);
@@ -973,7 +888,6 @@ function applySearchResults(items, isNewSearch) {
   searchResults = isNewSearch ? ids : searchResults.concat(ids);
   renderSearchList();
 }
-
 /* --- Unlimited Scroll: memuat halaman berikutnya saat mendekati akhir list --- */
 document.getElementById('searchList').addEventListener('scroll', (e) => {
   const el = e.target;
@@ -981,7 +895,6 @@ document.getElementById('searchList').addEventListener('scroll', (e) => {
   const nearBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 120;
   if (nearBottom) runSearch(searchState.query, false);
 });
-
 /* ------------------------- Projector bridge (one-way) ----------------------- */
 function buildProjectorHTML(initState) {
   const stateJSON = JSON.stringify(initState).replace(/</g, '\\u003c');
@@ -1003,7 +916,6 @@ function buildProjectorHTML(initState) {
   #ytplayer{width:100%;height:100%;}
   .empty-hint{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;color:#FFF7DDb3;font-family:'Segoe UI',sans-serif;}
   .empty-hint .big{font-size:3rem;opacity:.5;}
-
   .overlay-textbox{
     position:absolute; top:50%; left:50%;
     width:97%; max-width:2300px;
@@ -1064,9 +976,7 @@ function buildProjectorHTML(initState) {
   var initState = ${stateJSON};
   var ytPlayer = null, ytReady = false, cmdQueue = [];
   var hideTimer = null;
-
-  // The box itself never changes size — only the font shrinks as text grows,
-  // now scaled noticeably larger across every tier, including long text.
+  // Box size is fixed — only font size shrinks as text length grows.
   function fontSizeForLength(len){
     if (len <= 18) return 140;
     if (len <= 32) return 120;
@@ -1078,7 +988,6 @@ function buildProjectorHTML(initState) {
     if (len <= 300) return 40;
     return 34;
   }
-
   function showText(t){
     var b = document.getElementById('overlayTextBox');
     var c = document.getElementById('overlayTextContent');
@@ -1088,11 +997,8 @@ function buildProjectorHTML(initState) {
     b.classList.remove('hide');
     b.classList.remove('show');
     b.classList.remove('hidden');
-    // Double-rAF: guarantees the browser has painted the "visible, pre-animation"
-    // state on its own frame before the animation class is applied. Without this,
-    // some browsers (reliably reproducible on first load / certain GPU pipelines,
-    // e.g. many real-world static hosts) silently skip the very first animation
-    // and only start animating correctly from the second trigger onward.
+    // Double-rAF: ensures the pre-animation state is painted before adding the
+    // animation class, else some browsers skip the very first animation run.
     requestAnimationFrame(function () {
       requestAnimationFrame(function () {
         b.classList.add('show');
@@ -1115,13 +1021,9 @@ function buildProjectorHTML(initState) {
     }, 420);
   }
   function runOrQueue(fn){ if (ytReady) fn(); else cmdQueue.push(fn); }
-
-  // Fixes the black "notch"/curve some viewers saw behind the glass overlay:
-  // the YouTube embed letterboxes with solid black bars whenever the video's
-  // 16:9 ratio doesn't exactly match the window ratio, and the overlay's
-  // backdrop-filter was sampling those black bars. This resizes the underlying
-  // iframe to always cover the full viewport (crop instead of letterbox), like
-  // CSS object-fit:cover, so there is never a black area behind the glass.
+  // Fixes black bars behind the glass overlay: YT embed letterboxes when its
+  // 16:9 ratio doesn't match the window, so resize iframe to cover viewport
+  // (like object-fit:cover) instead of letterboxing.
   function fitPlayerCover(){
     var el = document.getElementById('ytplayer');
     if (!el || el.tagName !== 'IFRAME') return;
@@ -1137,7 +1039,6 @@ function buildProjectorHTML(initState) {
     el.style.height = h + 'px';
   }
   window.addEventListener('resize', fitPlayerCover);
-
   window.YumeProjector = {
     loadVideo: function(vid, time){
       runOrQueue(function(){
@@ -1161,9 +1062,7 @@ function buildProjectorHTML(initState) {
       });
     },
     setQuality: function(level){
-      // 'auto' -> kembalikan ke perilaku standar YouTube (adaptive bitrate
-      // otomatis mengikuti kondisi jaringan/perangkat). Selain itu -> paksa
-      // resolusi manual sesuai pilihan Operator.
+      // 'auto' -> standar YouTube (adaptive bitrate); selain itu -> paksa resolusi manual.
       runOrQueue(function(){
         ytPlayer.setPlaybackQuality(level === 'auto' ? 'default' : level);
       });
@@ -1171,10 +1070,7 @@ function buildProjectorHTML(initState) {
     showText: showText,
     hideText: hideText
   };
-
-  // ------------------------- Monitor FPS Proyektor ---------------------------
-  // Mengukur frame rate render halaman Proyektor (proxy kehalusan pemutaran
-  // video) lalu melaporkannya ke Operator setiap ~1 detik untuk grafik.
+  // Monitor FPS Proyektor: ukur frame rate render (proxy kehalusan video), lapor ke Operator tiap ~1s.
   (function () {
     var frames = 0, last = performance.now();
     function loop(now) {
@@ -1192,7 +1088,6 @@ function buildProjectorHTML(initState) {
     }
     requestAnimationFrame(loop);
   })();
-
   window.onYouTubeIframeAPIReady = function () {
     ytPlayer = new YT.Player('ytplayer', {
       host: 'https://www.youtube.com',
@@ -1226,8 +1121,7 @@ function buildProjectorHTML(initState) {
               }
             } catch (err) {}
           }
-          // Laporkan daftar resolusi yang tersedia untuk video yang sedang
-          // dimuat, supaya dropdown Kualitas Video di Operator selalu terkini.
+          // Laporkan resolusi tersedia agar dropdown Kualitas Video di Operator selalu terkini.
           try {
             if (window.opener && window.opener.YumeOperatorCallback && ytPlayer.getAvailableQualityLevels) {
               var levels = ytPlayer.getAvailableQualityLevels();
@@ -1248,16 +1142,13 @@ function buildProjectorHTML(initState) {
   var tag = document.createElement('script');
   tag.src = 'https://www.youtube.com/iframe_api';
   document.head.appendChild(tag);
-
-  // Best-effort auto fullscreen; some browsers block cross-window fullscreen
-  // requests, so we also arm a one-time click-to-fullscreen fallback on stage.
+  // Best-effort auto fullscreen; browsers may block it, so arm a click-to-fullscreen fallback too.
   try { document.documentElement.requestFullscreen && document.documentElement.requestFullscreen().catch(function(){}); } catch(e){}
   document.getElementById('stage').addEventListener('click', function(){
     if (!document.fullscreenElement) {
       try { document.documentElement.requestFullscreen(); } catch(e){}
     }
   });
-
   document.addEventListener('keydown', function (e) {
     var tagName = (e.target.tagName || '').toLowerCase();
     if (tagName === 'input' || tagName === 'textarea') return;
@@ -1276,7 +1167,6 @@ function buildProjectorHTML(initState) {
 </body>
 </html>`;
 }
-
 function openProjector() {
   if (projectorWin && !projectorWin.closed) {
     projectorWin.focus();
@@ -1301,9 +1191,7 @@ function openProjector() {
   toast('Layar Proyektor dibuka');
 }
 document.getElementById('btnOpenDisplay').addEventListener('click', openProjector);
-
-// Jika tab/window Operator ditutup (atau direfresh/dinavigasi), Panel Proyektor
-// ikut ditutup otomatis — Proyektor tidak boleh "menggantung" tanpa Operator.
+// Jika Operator ditutup/direfresh, Proyektor ikut ditutup — tak boleh "menggantung" sendiri.
 function closeProjectorWindow() {
   try {
     if (projectorWin && !projectorWin.closed) {
@@ -1313,7 +1201,6 @@ function closeProjectorWindow() {
 }
 window.addEventListener('beforeunload', closeProjectorWindow);
 window.addEventListener('pagehide', closeProjectorWindow);
-
 function requestProjectorFullscreen() {
   if (!projectorWin || projectorWin.closed) return;
   try {
@@ -1323,16 +1210,13 @@ function requestProjectorFullscreen() {
   } catch (e) { /* cross-window fullscreen can be blocked by the browser; the
                     Projector also arms its own click-to-fullscreen fallback */ }
 }
-
-// Called right before starting playback: opens the Projector automatically
-// (and requests fullscreen) if it isn't already open — no manual step needed.
+// Before playback: auto-opens Projector (+ requests fullscreen) if not already open.
 function ensureProjectorReady() {
   if (!projectorWin || projectorWin.closed) {
     openProjector();
     requestProjectorFullscreen();
   }
 }
-
 function sendToProjector(action, payload) {
   if (!projectorWin || projectorWin.closed) return false;
   try {
@@ -1354,18 +1238,14 @@ function sendToProjector(action, payload) {
     return false;
   }
 }
-
-// One necessary exception to the strict one-way flow: the Projector calls this
-// back directly (via window.opener) purely to signal "video ended", laporan FPS,
-// dan status kualitas video — semuanya searah dari Proyektor ke Operator saja
-// (Operator tidak pernah membaca state internal Proyektor secara langsung).
+// Only exception to one-way flow: Projector calls back via window.opener to signal
+// "ended", FPS, and quality status — always Projector->Operator, never reverse.
 window.YumeOperatorCallback = {
   onEnded: function () { handleVideoEnded(); },
   onFps: function (fps) { recordFpsSample(fps); },
   onQualityLevels: function (levels) { populateQualityOptions(levels); },
   onQualityChange: function (q) { updateQualityActiveBadge(q); }
 };
-
 /* ------------------------------ Playback logic ------------------------------ */
 function updatePlayPauseBtn() {
   document.getElementById('btnPlayPause').textContent = isPlaying ? '⏸ Pause' : '▶ Play';
@@ -1386,10 +1266,8 @@ function toggleCaptions() {
   toast(ccEnabled ? 'Subtitle diaktifkan' : 'Subtitle dinonaktifkan');
 }
 document.getElementById('btnCaptions').addEventListener('click', toggleCaptions);
-
 /* ------------------------- Kualitas Video (Manual/Auto) --------------------- */
-// Pilihan kualitas SELALU dimulai dari 'auto' setiap sesi (perilaku adaptif
-// standar YouTube) — sama seperti Subtitle, tidak disimpan ke localStorage.
+// Kualitas SELALU mulai dari 'auto' tiap sesi (spt Subtitle, tak disimpan ke localStorage).
 let selectedQuality = 'auto';
 const QUALITY_LABELS = {
   auto: 'Auto (Standar YouTube)',
@@ -1404,7 +1282,6 @@ const QUALITY_LABELS = {
   tiny: '144p'
 };
 let lastKnownQualityLevels = [];
-
 function populateQualityOptions(levels) {
   lastKnownQualityLevels = levels.slice();
   const sel = document.getElementById('qualitySelect');
@@ -1428,12 +1305,10 @@ function populateQualityOptions(levels) {
     selectedQuality = 'auto';
   }
 }
-
 function updateQualityActiveBadge(q) {
   const badge = document.getElementById('qualityActive');
   badge.textContent = 'Sedang: ' + (QUALITY_LABELS[q] || q || '—');
 }
-
 document.getElementById('qualitySelect').addEventListener('change', (e) => {
   selectedQuality = e.target.value;
   sendToProjector('quality', { level: selectedQuality });
@@ -1441,7 +1316,6 @@ document.getElementById('qualitySelect').addEventListener('change', (e) => {
     ? 'Kualitas video: Auto (Standar YouTube)'
     : `Kualitas video diatur manual: ${QUALITY_LABELS[selectedQuality] || selectedQuality}`);
 });
-
 function loadVideoIntoPlayer(vid, startSeconds = 0, autoplay = true) {
   if (autoplay) ensureProjectorReady();
   currentVideoId = vid;
@@ -1458,8 +1332,7 @@ function loadVideoIntoPlayer(vid, startSeconds = 0, autoplay = true) {
   playerState.time = startSeconds;
   Store.set(STORAGE_KEYS.PLAYER_STATE, playerState);
   sendToProjector('loadVideo', { vid, time: startSeconds });
-  // Jika Operator sedang memakai kualitas manual (bukan Auto), terapkan ulang
-  // setelah video baru selesai dimuat oleh Proyektor.
+  // Jika kualitas manual (bukan Auto) aktif, terapkan ulang setelah video baru dimuat.
   if (selectedQuality !== 'auto') {
     setTimeout(() => sendToProjector('quality', { level: selectedQuality }), 1200);
   }
@@ -1468,12 +1341,10 @@ function loadVideoIntoPlayer(vid, startSeconds = 0, autoplay = true) {
   renderPlaylistList();
   renderSearchList();
 }
-
 function playVideo(vid) {
   if (!videos[vid]) return;
   loadVideoIntoPlayer(vid, 0, true);
 }
-
 document.getElementById('btnPlayPause').addEventListener('click', () => {
   if (!currentVideoId) { toast('Pilih video terlebih dahulu', true); return; }
   if (isPlaying) {
@@ -1486,18 +1357,15 @@ document.getElementById('btnPlayPause').addEventListener('click', () => {
   }
   updatePlayPauseBtn();
 });
-
 document.getElementById('btnMute').addEventListener('click', () => {
   isMuted = !isMuted;
   sendToProjector(isMuted ? 'mute' : 'unmute');
   updateMuteBtn();
 });
-
 function getActiveQueue() {
   const pl = playlists[activePlaylistId];
   return pl ? pl.videoIds.slice() : [];
 }
-
 function playNext() {
   const queue = getActiveQueue();
   if (queue.length === 0) return;
@@ -1517,10 +1385,8 @@ function playPrev() {
   let prevIdx = idx <= 0 ? queue.length - 1 : idx - 1;
   playVideo(queue[prevIdx]);
 }
-
 document.getElementById('btnNext').addEventListener('click', playNext);
 document.getElementById('btnPrev').addEventListener('click', playPrev);
-
 document.getElementById('btnShuffle').addEventListener('click', (e) => {
   playerState.shuffle = !playerState.shuffle;
   Store.set(STORAGE_KEYS.PLAYER_STATE, playerState);
@@ -1537,7 +1403,6 @@ document.getElementById('volumeSlider').addEventListener('input', (e) => {
   Store.set(STORAGE_KEYS.PLAYER_STATE, playerState);
   sendToProjector('volume', { volume: vol });
 });
-
 function handleVideoEnded() {
   if (playerState.loop) {
     ensureProjectorReady();
@@ -1549,7 +1414,6 @@ function handleVideoEnded() {
   }
   playNext();
 }
-
 /* ------------------------------ Typing Box (Overlay Text) ------------------- */
 const typingBox = document.getElementById('typingBox');
 function sendTypedText() {
@@ -1565,17 +1429,13 @@ typingBox.addEventListener('keydown', (e) => {
 document.getElementById('btnHideText').addEventListener('click', () => {
   sendToProjector('hideText');
 });
-
 /* ------------------- Kondisi Sistem: FPS & Jaringan (grafik) ---------------- */
-// Optimisasi: kualitas video Auto memakai adaptive bitrate bawaan YouTube yang
-// otomatis menyesuaikan ke kondisi jaringan. Panel ini membantu Operator
-// memantau kehalusan (FPS Proyektor) dan latensi jaringan secara real-time,
-// serta memberi saran bila jaringan terdeteksi lambat saat kualitas manual aktif.
+// Kualitas Auto pakai adaptive bitrate bawaan YouTube. Panel ini memantau FPS
+// Proyektor & latensi jaringan real-time, dan menyarankan Auto jika jaringan lambat saat manual aktif.
 const MAX_SAMPLES = 40;
 let fpsHistory = [];
 let netHistory = [];
 let lastNetWarnAt = 0;
-
 function drawSparkline(canvas, data, color) {
   const ctx = canvas.getContext('2d');
   const w = canvas.width, h = canvas.height;
@@ -1603,23 +1463,19 @@ function drawSparkline(canvas, data, color) {
   ctx.fillStyle = color + '22';
   ctx.fill();
 }
-
 function recordFpsSample(fps) {
   fpsHistory.push(fps);
   if (fpsHistory.length > MAX_SAMPLES) fpsHistory.shift();
   document.getElementById('fpsValue').textContent = fps + ' fps';
   drawSparkline(document.getElementById('fpsCanvas'), fpsHistory, fps < 30 ? '#e08a8a' : (fps < 50 ? '#f28f29' : '#B4DEBD'));
 }
-
-// Jika Proyektor tidak aktif, tidak ada laporan FPS masuk — tandai sebagai idle
-// alih-alih membiarkan angka lama menggantung dan menyesatkan Operator.
+// Jika Proyektor tidak aktif, tak ada laporan FPS masuk — tandai idle, jangan biarkan angka lama menyesatkan.
 setInterval(() => {
   const projectorOpen = !!(projectorWin && !projectorWin.closed);
   if (!projectorOpen) {
     document.getElementById('fpsValue').textContent = '-- fps';
   }
 }, 2500);
-
 async function pingNetwork() {
   const start = performance.now();
   try {
@@ -1642,8 +1498,7 @@ function recordNetSample(ms) {
     valEl.textContent = ms + ' ms';
     miniEl.textContent = '📶 ' + ms + ' ms';
     drawSparkline(document.getElementById('netCanvas'), netHistory, ms > 400 ? '#e08a8a' : (ms > 180 ? '#f28f29' : '#B4DEBD'));
-    // Saran optimasi ringan: kalau jaringan lambat dan kualitas manual aktif,
-    // sarankan kembali ke Auto agar pemutaran tetap lancar (tidak dipaksa).
+    // Kalau jaringan lambat & kualitas manual aktif, sarankan kembali ke Auto (tidak dipaksa).
     const now = Date.now();
     if (ms > 400 && selectedQuality !== 'auto' && now - lastNetWarnAt > 60000) {
       lastNetWarnAt = now;
@@ -1662,7 +1517,6 @@ function updateNetExtraInfo() {
   }
 }
 setInterval(pingNetwork, 4000);
-
 /* ------------------------------ Global Hotkeys ------------------------------- */
 document.addEventListener('keydown', (e) => {
   const tag = (e.target.tagName || '').toLowerCase();
@@ -1698,7 +1552,6 @@ document.addEventListener('keydown', (e) => {
     toggleCaptions();
   }
 });
-
 /* ------------------------------ Init ----------------------------------------- */
 function init() {
   refreshApiStatusUI();

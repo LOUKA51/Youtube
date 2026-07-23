@@ -369,6 +369,17 @@
   }
   .icon-btn:hover{ background:var(--accent); color:#0b0d12; border-color:var(--accent); }
 
+  /* Tombol aksi field (Bersihkan/Tempel) — target klik 44px agar nyaman
+     ditekan mouse maupun jari, konsisten dengan warna & radius tombol lain. */
+  .field-btn{
+    flex-shrink:0; display:flex; align-items:center; justify-content:center; gap:6px;
+    min-width:44px; height:44px; padding:0 14px;
+    background:#FFF7DD12; border:1px solid var(--border-soft); color:var(--text);
+    border-radius:10px; font-size:1.05rem; transition:.15s ease;
+  }
+  .field-btn:hover{ background:var(--accent); color:#0b0d12; border-color:var(--accent); transform:translateY(-1px); }
+  .field-btn:active{ transform:translateY(0); }
+
   /* ===== PROJECTOR PANEL ===== */
   .projector-panel{ padding:16px; display:flex; flex-direction:column; gap:12px; }
   .projector-panel h3{ font-size:.95rem; font-weight:700; letter-spacing:.3px; text-shadow:0 2px 10px rgba(0,0,0,0.5); }
@@ -402,15 +413,16 @@
   #playlistList{ max-height:72vh; }
 
   /* ===== Kontrol Filter / Sort / View Toggle (di dalam box Hasil Pencarian) ===== */
-  .search-box{ position:relative; }
-  .search-box input{
+  .search-box{ display:flex; align-items:center; gap:8px; }
+  .search-input-wrap{ position:relative; flex:1 1 auto; min-width:0; }
+  .search-input-wrap input{
     width:100%; padding:11px 44px 11px 16px;
     background:#FFF7DD12; border:1px solid var(--border); border-radius:12px;
     color:var(--text); font-size:.92rem; outline:none; transition:all .2s ease;
   }
-  .search-box input::placeholder{ color:var(--text-dim); }
-  .search-box input:focus{ border-color:var(--accent); background:#FFF7DD1f; box-shadow:0 0 0 3px var(--accent-ring); }
-  .search-box .icon{ position:absolute; right:14px; top:50%; transform:translateY(-50%); opacity:.7; font-size:1rem; pointer-events:none; }
+  .search-input-wrap input::placeholder{ color:var(--text-dim); }
+  .search-input-wrap input:focus{ border-color:var(--accent); background:#FFF7DD1f; box-shadow:0 0 0 3px var(--accent-ring); }
+  .search-input-wrap .icon{ position:absolute; right:14px; top:50%; transform:translateY(-50%); opacity:.7; font-size:1rem; pointer-events:none; }
 
   .search-controls{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
   .search-controls select{
@@ -698,6 +710,8 @@
 
     <div class="glass typing-row">
       <input type="text" id="typingBox" placeholder="Ketik teks untuk Layar Proyektor... (Enter untuk kirim)" autocomplete="off">
+      <button type="button" class="field-btn" id="btnTypingClean" title="Bersihkan kolom teks" aria-label="Bersihkan kolom teks">🧹</button>
+      <button type="button" class="field-btn" id="btnTypingPaste" title="Tempel dari clipboard" aria-label="Tempel dari clipboard">📋</button>
       <button class="ctrl-btn play-main" id="btnSendText">📢 Kirim</button>
       <button class="ctrl-btn" id="btnHideText" title="Sembunyikan (T)">🙈 Sembunyikan</button>
     </div>
@@ -714,8 +728,12 @@
         <span class="count" id="searchCount">0</span>
       </div>
       <div class="search-box">
-        <input id="searchInput" type="text" placeholder="Cari musik, video musik, atau lirik..." autocomplete="off">
-        <span class="icon">🔍</span>
+        <div class="search-input-wrap">
+          <input id="searchInput" type="text" placeholder="Cari musik, video musik, atau lirik..." autocomplete="off">
+          <span class="icon">🔍</span>
+        </div>
+        <button type="button" class="field-btn" id="btnSearchClean" title="Bersihkan kolom pencarian" aria-label="Bersihkan kolom pencarian">🧹</button>
+        <button type="button" class="field-btn" id="btnSearchPaste" title="Tempel dari clipboard" aria-label="Tempel dari clipboard">📋</button>
       </div>
       <div class="search-controls">
         <label>Urutkan
@@ -1352,6 +1370,37 @@ document.getElementById('searchInput').addEventListener('keydown', (e) => {
   e.preventDefault();
   clearTimeout(debounceTimer);
   handleSearchSubmit(e.target.value.trim());
+});
+
+// Helper Clean/Paste untuk kolom teks (searchInput & typingBox).
+// Clipboard-read butuh secure context (https/localhost); saat dibuka via
+// file:// permintaan ini akan gagal — fallback: fokuskan field & minta
+// pengguna Ctrl+V manual, jangan diam saja tanpa umpan balik.
+async function pasteFromClipboard(inputEl, dispatchInputEvent) {
+  try {
+    if (!navigator.clipboard || !navigator.clipboard.readText) throw new Error('unsupported');
+    const text = await navigator.clipboard.readText();
+    if (!text) { toast('Clipboard kosong', true); return; }
+    inputEl.value = text;
+    inputEl.focus();
+    if (dispatchInputEvent) inputEl.dispatchEvent(new Event('input', { bubbles: true }));
+    toast('Teks ditempel dari clipboard');
+  } catch (err) {
+    inputEl.focus();
+    toast('Browser memblokir tempel otomatis — klik kolom lalu tekan Ctrl+V', true);
+  }
+}
+
+document.getElementById('btnSearchClean').addEventListener('click', () => {
+  const input = document.getElementById('searchInput');
+  input.value = '';
+  input.focus();
+  // Pancing ulang listener 'input' yang sudah ada supaya hasil pencarian
+  // & searchState ikut ter-reset persis seperti saat dihapus manual.
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+});
+document.getElementById('btnSearchPaste').addEventListener('click', () => {
+  pasteFromClipboard(document.getElementById('searchInput'), true);
 });
 
 // Mengubah status toggle saat link playlist sudah ada di kolom = jalankan ulang.
@@ -2633,6 +2682,13 @@ typingBox.addEventListener('keydown', (e) => {
 });
 document.getElementById('btnHideText').addEventListener('click', () => {
   sendToProjector('hideText');
+});
+document.getElementById('btnTypingClean').addEventListener('click', () => {
+  typingBox.value = '';
+  typingBox.focus();
+});
+document.getElementById('btnTypingPaste').addEventListener('click', () => {
+  pasteFromClipboard(typingBox, false);
 });
 
 /* ------------------- Kondisi Sistem: FPS & Jaringan (grafik) ---------------- */

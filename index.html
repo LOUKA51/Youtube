@@ -353,6 +353,26 @@
   }
   .typing-row input[type=text]:focus{ border-color:var(--accent); background:#FFF7DD1f; box-shadow:0 0 0 3px var(--accent-ring); }
 
+  /* ===== Preview Teks Aktif (Layar Proyektor) — tidak menampilkan video, hanya status teks overlay ===== */
+  .text-preview-box{ padding:14px 16px; display:flex; flex-direction:column; gap:8px; }
+  .text-preview-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .text-preview-head .label{ font-size:.82rem; font-weight:700; color:var(--text-dim); letter-spacing:.3px; }
+  .text-preview-status{
+    display:flex; align-items:center; gap:6px; font-size:.72rem; font-weight:700;
+    padding:3px 10px; border-radius:999px; white-space:nowrap;
+  }
+  .text-preview-status .led{ width:8px; height:8px; border-radius:50%; background:var(--text-dim); flex-shrink:0; }
+  .text-preview-status.inactive{ color:var(--text-dim); background:#FFF7DD12; }
+  .text-preview-status.active{ color:var(--success); background:#B4DEBD1f; }
+  .text-preview-status.active .led{ background:var(--success); box-shadow:0 0 6px var(--success); }
+  .text-preview-body{
+    min-height:60px; max-height:160px; overflow-y:auto;
+    padding:12px 14px; border-radius:10px;
+    background:#0b0d12b0; border:1px solid var(--border-soft);
+    font-size:.95rem; line-height:1.5; word-break:break-word; white-space:pre-wrap;
+  }
+  .text-preview-body.is-empty{ color:var(--text-dim); font-style:italic; font-size:.85rem; }
+
   /* Tombol Paste (kiri) & Bersihkan (kanan) — dipakai di Typing Box & Search Box.
      Ukuran dibuat besar (min-height 52px, padding lega) agar mudah ditekan mouse. */
   .btn-paste, .btn-clear{
@@ -717,6 +737,14 @@
       <button type="button" class="btn-clear" id="btnClearTyping" title="Bersihkan teks">🧹 Bersihkan</button>
       <button class="ctrl-btn play-main" id="btnSendText">📢 Kirim</button>
       <button class="ctrl-btn" id="btnHideText" title="Sembunyikan (T)">🙈 Sembunyikan</button>
+    </div>
+
+    <div class="glass text-preview-box">
+      <div class="text-preview-head">
+        <span class="label">👁️ Preview Teks Aktif</span>
+        <span class="text-preview-status inactive" id="textPreviewStatus"><span class="led"></span>Tidak Aktif</span>
+      </div>
+      <div class="text-preview-body is-empty" id="textPreviewBody">Belum ada teks aktif di Layar Proyektor.</div>
     </div>
 
     <div class="glass playlist-select">
@@ -2671,18 +2699,50 @@ function handleVideoEnded() {
 
 /* ------------------------------ Typing Box (Overlay Text) ------------------- */
 const typingBox = document.getElementById('typingBox');
+
+/* Preview Teks Aktif: hanya menampilkan STATUS teks overlay Layar Proyektor
+   (bukan video). State ini murni disimpan di sisi Operator — mengikuti alur
+   satu-arah Operator -> Projector yang sudah ada (lihat sendToProjector) —
+   sehingga hanya berubah saat Operator sendiri yang mengirim/menyembunyikan
+   teks. Jika sendToProjector gagal (window belum terbuka/belum siap),
+   activeProjectorText TIDAK diubah, supaya preview tidak bohong soal status. */
+let activeProjectorText = null;
+function renderTextPreview() {
+  const statusEl = document.getElementById('textPreviewStatus');
+  const bodyEl = document.getElementById('textPreviewBody');
+  if (activeProjectorText) {
+    statusEl.className = 'text-preview-status active';
+    statusEl.innerHTML = '<span class="led"></span>Aktif';
+    bodyEl.classList.remove('is-empty');
+    bodyEl.textContent = activeProjectorText;
+  } else {
+    statusEl.className = 'text-preview-status inactive';
+    statusEl.innerHTML = '<span class="led"></span>Tidak Aktif';
+    bodyEl.classList.add('is-empty');
+    bodyEl.textContent = 'Belum ada teks aktif di Layar Proyektor.';
+  }
+}
+
 function sendTypedText() {
   const text = typingBox.value.trim();
   if (!text) { toast('Ketik teks terlebih dahulu', true); return; }
-  sendToProjector('text', { text });
-  toast('Teks dikirim ke Layar Proyektor');
+  const ok = sendToProjector('text', { text });
+  if (ok) {
+    activeProjectorText = text;
+    renderTextPreview();
+    toast('Teks dikirim ke Layar Proyektor');
+  }
 }
 document.getElementById('btnSendText').addEventListener('click', sendTypedText);
 typingBox.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') { e.preventDefault(); sendTypedText(); }
 });
 document.getElementById('btnHideText').addEventListener('click', () => {
-  sendToProjector('hideText');
+  const ok = sendToProjector('hideText');
+  if (ok) {
+    activeProjectorText = null;
+    renderTextPreview();
+  }
 });
 
 /* Paste: ambil teks dari clipboard sistem dan sisipkan ke Typing Box.
@@ -2909,7 +2969,10 @@ document.addEventListener('keydown', (e) => {
   }
 
   if (key === 't') {
-    sendToProjector('hideText');
+    if (sendToProjector('hideText')) {
+      activeProjectorText = null;
+      renderTextPreview();
+    }
   } else if (key === 'i') {
     toggleKeybindModal();
   } else if (key === 'p') {

@@ -6,9 +6,23 @@
 <title>Yume Player — Operator Console</title>
 <style>
   :root{
-    --accent:#80A1BA;
-    --accent-dark:#6488A6;
-    --border:#91C4C3;
+    /* --ui-hue dianimasikan pelan oleh FluidColor (JS, ~8 update/detik).
+       Seluruh warna aksen diturunkan dari sini agar UI tidak monoton. */
+    --ui-hue: 205;
+    --ui-sat: 30%;
+    --accent: hsl(var(--ui-hue) var(--ui-sat) 62%);
+    --accent-dark: hsl(var(--ui-hue) var(--ui-sat) 52%);
+    --accent-ring: hsl(var(--ui-hue) var(--ui-sat) 62% / .20);
+    --accent-fade: hsl(var(--ui-hue) var(--ui-sat) 62% / .13);
+    --accent-mid: hsl(var(--ui-hue) var(--ui-sat) 62% / .33);
+    --accent-strong: hsl(var(--ui-hue) var(--ui-sat) 62% / .53);
+    --border: hsl(calc(var(--ui-hue) - 27) 34% 66%);
+    --border-soft: hsl(calc(var(--ui-hue) - 27) 34% 66% / .20);
+    --border-mid: hsl(calc(var(--ui-hue) - 27) 34% 66% / .33);
+    --border-faint: hsl(calc(var(--ui-hue) - 27) 34% 66% / .13);
+    /* Radius blur terpusat — satu titik ubah untuk semua panel kaca */
+    --glass-blur: 14px;
+    --glass-sat: 130%;
     --success:#B4DEBD;
     --text:#FFF7DD;
     --text-dim:#FFF7DDb3;
@@ -28,13 +42,30 @@
     overflow-x:hidden;
     position:relative;
   }
+  /* Wallpaper di-blur SEKALI di layer sendiri (transform:translateZ(0) =>
+     dipromosikan ke GPU layer statis). Radius diturunkan 18px -> 10px karena
+     panel kaca di atasnya sudah mem-blur ulang; selisih visualnya tak terlihat
+     tapi biaya raster turun signifikan saat resize/scroll. */
   body::before{
     content:'';
     position:fixed; inset:-40px; z-index:-2;
     background:
       linear-gradient(180deg, #0b0d12d9, #0b0d12ee),
       url('https://raw.githubusercontent.com/LOUKA51/Youtube/refs/heads/main/1366762.webp') center/cover no-repeat;
-    filter: blur(18px);
+    filter: blur(10px);
+    transform: translateZ(0);
+    contain: strict;
+  }
+  /* Lapisan warna dinamis: satu elemen tipis, mengikuti --ui-hue.
+     Tidak dianimasikan CSS (tidak ada repaint per-frame) — hanya berubah
+     saat FluidColor menaikkan hue. */
+  body::after{
+    content:'';
+    position:fixed; inset:-40px; z-index:-1; pointer-events:none;
+    background:
+      radial-gradient(80% 55% at 12% 0%, hsl(var(--ui-hue) 45% 55% / .16), transparent 60%),
+      radial-gradient(70% 50% at 92% 100%, hsl(calc(var(--ui-hue) + 60) 45% 55% / .13), transparent 60%);
+    transform: translateZ(0);
   }
 
   ::selection{ background:var(--accent); color:#0b0d12; }
@@ -48,22 +79,40 @@
 
   .glass{
     background:var(--panel-bg);
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
-    border:1px solid #91C4C333;
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+    border:1px solid var(--border-soft);
     border-radius:18px;
     box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+    /* Batasi area yang harus di-repaint saat isi panel berubah */
+    contain: paint;
   }
+  /* Fallback bila backdrop-filter tidak didukung */
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))){
+    .glass{ background:#12161ef2; }
+  }
+  /* ===== MODE HEMAT (perf-lite) — semua backdrop-filter dimatikan ===== */
+  body.perf-lite .glass,
+  body.perf-lite .topbar,
+  body.perf-lite .modal-overlay{
+    backdrop-filter:none !important;
+    -webkit-backdrop-filter:none !important;
+  }
+  body.perf-lite .glass{ background:#12161ef5; }
+  body.perf-lite .topbar{ background:#0b0d12f2; }
+  body.perf-lite .modal-overlay{ background:#0b0d12e6; }
+  body.perf-lite::before{ filter:none; opacity:.35; }
+  body.perf-lite::after{ display:none; }
 
   /* ===== TOP BAR ===== */
   .topbar{
     position:sticky; top:0; z-index:50;
     display:flex; align-items:center; gap:16px;
     padding:12px 20px;
-    background:#0b0d12aa;
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
-    border-bottom:1px solid #91C4C333;
+    background:#0b0d12cc;
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+    border-bottom:1px solid var(--border-soft);
   }
   .logo{
     display:flex; align-items:center; gap:8px;
@@ -85,7 +134,7 @@
     transition:all .2s ease;
   }
   .searchwrap input::placeholder{ color:var(--text-dim); }
-  .searchwrap input:focus{ border-color:var(--accent); background:#FFF7DD1f; box-shadow:0 0 0 3px #80A1BA33; }
+  .searchwrap input:focus{ border-color:var(--accent); background:#FFF7DD1f; box-shadow:0 0 0 3px var(--accent-ring); }
   .searchwrap .icon{
     position:absolute; right:14px; top:50%; transform:translateY(-50%);
     opacity:.7; pointer-events:none; font-size:1rem;
@@ -94,7 +143,7 @@
   .quota-pill{
     display:flex; flex-direction:column; align-items:stretch; gap:5px;
     min-width:158px; padding:6px 12px 7px; border-radius:14px;
-    border:1px solid #91C4C333; background:#FFF7DD0d;
+    border:1px solid var(--border-soft); background:#FFF7DD0d;
     font-size:.72rem; color:var(--text-dim); cursor:pointer;
     white-space:nowrap; transition:border-color .2s ease, background .2s ease;
   }
@@ -122,7 +171,7 @@
     display:flex; align-items:center; gap:8px;
     font-size:.8rem; color:var(--text-dim);
     padding:8px 14px; border-radius:999px;
-    border:1px solid #91C4C333; background:#FFF7DD0d;
+    border:1px solid var(--border-soft); background:#FFF7DD0d;
     white-space:nowrap; transition:.2s;
     cursor:pointer; pointer-events:auto;
     position:relative; z-index:5; flex-shrink:0;
@@ -152,19 +201,19 @@
   .np-bar{
     display:flex; align-items:center; gap:12px;
     padding:12px 14px; border-radius:12px;
-    background:var(--card-bg); border:1px solid #91C4C333;
+    background:var(--card-bg); border:1px solid var(--border-soft);
   }
   .np-thumb{
     width:72px; aspect-ratio:16/9; border-radius:8px;
     object-fit:cover; background:#1a1e26; flex-shrink:0;
-    border:1px solid #91C4C333;
+    border:1px solid var(--border-soft);
   }
   .np-thumb-empty{
     width:72px; aspect-ratio:16/9; border-radius:8px;
     background:linear-gradient(135deg,#12161e,#1a1e26);
     display:flex; align-items:center; justify-content:center;
     font-size:1.4rem; opacity:.5; flex-shrink:0;
-    border:1px solid #91C4C322;
+    border:1px solid var(--border-faint);
   }
   .np-info{ flex:1; min-width:0; }
   .nowplaying h2{ font-size:1rem; font-weight:700; line-height:1.35; margin-bottom:3px; text-shadow:0 2px 10px rgba(0,0,0,0.5); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -174,7 +223,7 @@
     display:none; align-items:center; gap:5px;
     font-size:.65rem; font-weight:700; letter-spacing:.5px;
     color:var(--accent); padding:3px 8px; border-radius:999px;
-    border:1px solid #80A1BA55; background:#80A1BA14;
+    border:1px solid var(--accent-mid); background:var(--accent-fade);
     white-space:nowrap; flex-shrink:0;
   }
   .np-live-badge.visible{ display:flex; }
@@ -194,7 +243,7 @@
     transform:translateY(-50%);
     height:6px; border-radius:999px;
     background:#FFF7DD18;
-    border:1px solid #91C4C333;
+    border:1px solid var(--border-soft);
     pointer-events:none;
     overflow:hidden;
   }
@@ -202,7 +251,7 @@
     position:absolute; left:0; top:0; bottom:0;
     width:0%;
     background:linear-gradient(90deg, var(--accent), var(--border));
-    box-shadow: 0 0 8px #80A1BA88;
+    box-shadow: 0 0 8px var(--accent-strong);
     transition:width .12s linear;
     will-change:width;
   }
@@ -227,7 +276,7 @@
     width:14px; height:14px; border-radius:50%;
     background:var(--text);
     border:2px solid var(--accent);
-    box-shadow:0 2px 8px rgba(0,0,0,0.5), 0 0 0 0 #80A1BA55;
+    box-shadow:0 2px 8px rgba(0,0,0,0.5), 0 0 0 0 var(--accent-mid);
     margin-top:0; /* Chromium centers thumb on 22px track */
     transition:transform .15s ease, box-shadow .15s ease;
     cursor:pointer;
@@ -244,16 +293,16 @@
   .timeline-input:focus::-webkit-slider-thumb,
   .timeline-wrap.dragging .timeline-input::-webkit-slider-thumb{
     transform:scale(1.25);
-    box-shadow:0 2px 10px rgba(0,0,0,0.55), 0 0 0 6px #80A1BA33;
+    box-shadow:0 2px 10px rgba(0,0,0,0.55), 0 0 0 6px var(--accent-ring);
   }
   .timeline-input:hover::-moz-range-thumb,
   .timeline-input:focus::-moz-range-thumb,
   .timeline-wrap.dragging .timeline-input::-moz-range-thumb{
     transform:scale(1.25);
-    box-shadow:0 2px 10px rgba(0,0,0,0.55), 0 0 0 6px #80A1BA33;
+    box-shadow:0 2px 10px rgba(0,0,0,0.55), 0 0 0 6px var(--accent-ring);
   }
   .timeline-input:disabled{ cursor:not-allowed; opacity:.5; }
-  .timeline-input:disabled::-webkit-slider-thumb{ background:var(--text-dim); border-color:#91C4C355; }
+  .timeline-input:disabled::-webkit-slider-thumb{ background:var(--text-dim); border-color:var(--border-mid); }
 
   .timeline-time{
     font-family:'JetBrains Mono', 'Consolas', ui-monospace, monospace;
@@ -270,7 +319,7 @@
   }
   .ctrl-btn{
     display:flex; align-items:center; gap:6px;
-    background:#FFF7DD12; border:1px solid #91C4C333; color:var(--text);
+    background:#FFF7DD12; border:1px solid var(--border-soft); color:var(--text);
     padding:8px 14px; border-radius:10px; font-size:.85rem;
     transition:.15s ease;
   }
@@ -301,7 +350,7 @@
     background:#FFF7DD12; border:1px solid var(--border); border-radius:10px;
     color:var(--text); font-size:.88rem; outline:none; transition:.2s ease;
   }
-  .typing-row input[type=text]:focus{ border-color:var(--accent); background:#FFF7DD1f; box-shadow:0 0 0 3px #80A1BA33; }
+  .typing-row input[type=text]:focus{ border-color:var(--accent); background:#FFF7DD1f; box-shadow:0 0 0 3px var(--accent-ring); }
 
   .playlist-select{
     display:flex; align-items:center; gap:10px; flex-wrap:wrap;
@@ -314,7 +363,7 @@
   }
   .playlist-select select option{ background:#1a1e26; color:var(--text); }
   .icon-btn{
-    background:#FFF7DD12; border:1px solid #91C4C333; color:var(--text);
+    background:#FFF7DD12; border:1px solid var(--border-soft); color:var(--text);
     width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center;
     font-size:1rem; transition:.15s;
   }
@@ -326,7 +375,7 @@
   .btn{ padding:9px 18px; border-radius:10px; font-size:.85rem; font-weight:600; }
   .btn.primary{ background:var(--accent); color:#0b0d12; }
   .btn.primary:hover{ background:var(--accent-dark); }
-  .btn.ghost{ background:transparent; color:var(--text-dim); border:1px solid #91C4C355; }
+  .btn.ghost{ background:transparent; color:var(--text-dim); border:1px solid var(--border-mid); }
   .btn.ghost:hover{ color:var(--text); border-color:var(--border); }
   .btn.block{ width:100%; }
   .hint{ font-size:.72rem; color:var(--text-dim); line-height:1.5; }
@@ -360,7 +409,7 @@
     color:var(--text); font-size:.92rem; outline:none; transition:all .2s ease;
   }
   .search-box input::placeholder{ color:var(--text-dim); }
-  .search-box input:focus{ border-color:var(--accent); background:#FFF7DD1f; box-shadow:0 0 0 3px #80A1BA33; }
+  .search-box input:focus{ border-color:var(--accent); background:#FFF7DD1f; box-shadow:0 0 0 3px var(--accent-ring); }
   .search-box .icon{ position:absolute; right:14px; top:50%; transform:translateY(-50%); opacity:.7; font-size:1rem; pointer-events:none; }
 
   .search-controls{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
@@ -375,7 +424,7 @@
   .switch-field input{ position:absolute; opacity:0; width:0; height:0; }
   .switch-track{
     position:relative; width:38px; height:20px; flex-shrink:0; border-radius:999px;
-    background:#FFF7DD12; border:1px solid #91C4C333;
+    background:#FFF7DD12; border:1px solid var(--border-soft);
     transition: background .18s ease, border-color .18s ease;
   }
   .switch-track::after{
@@ -383,15 +432,15 @@
     background:var(--text-dim); will-change: transform;
     transition: transform .18s cubic-bezier(.4,0,.2,1), background .18s ease;
   }
-  .switch-field input:focus-visible + .switch-track{ box-shadow:0 0 0 3px #80A1BA33; }
-  .switch-field input:checked + .switch-track{ background:#80A1BA55; border-color:var(--border); }
+  .switch-field input:focus-visible + .switch-track{ box-shadow:0 0 0 3px var(--accent-ring); }
+  .switch-field input:checked + .switch-track{ background:var(--accent-mid); border-color:var(--border); }
   .switch-field input:checked + .switch-track::after{ transform:translateX(18px); background:var(--success); }
   .switch-field input:checked ~ .switch-label{ color:var(--text); }
   @media (prefers-reduced-motion: reduce){ .switch-track, .switch-track::after{ transition:none; } }
 
   .view-toggle{ display:flex; gap:4px; margin-left:auto; }
   .view-toggle button{
-    width:32px; height:32px; border-radius:9px; background:#FFF7DD12; border:1px solid #91C4C333;
+    width:32px; height:32px; border-radius:9px; background:#FFF7DD12; border:1px solid var(--border-soft);
     color:var(--text-dim); display:flex; align-items:center; justify-content:center; font-size:.9rem; transition:.15s;
   }
   .view-toggle button:hover{ color:var(--text); border-color:var(--border); }
@@ -402,8 +451,8 @@
     background:var(--card-bg); border:1px solid transparent;
     transition:.15s ease; cursor:pointer; position:relative;
   }
-  .item:hover{ background:var(--card-bg-hover); border-color:#91C4C355; }
-  .item.playing{ border-color:var(--accent); background:#80A1BA22; }
+  .item:hover{ background:var(--card-bg-hover); border-color:var(--border-mid); }
+  .item.playing{ border-color:var(--accent); background:var(--accent-fade); }
   .item img{
     width:104px; aspect-ratio:16/9; object-fit:cover; border-radius:8px; flex-shrink:0;
     background:#1a1e26;
@@ -463,7 +512,7 @@
 
   /* ===== MODAL ===== */
   .modal-overlay{
-    position:fixed; inset:0; background:#0b0d12b3; backdrop-filter:blur(6px);
+    position:fixed; inset:0; background:#0b0d12cc; backdrop-filter:blur(4px);
     display:flex; align-items:center; justify-content:center; z-index:100; padding:20px;
   }
   .modal{ width:100%; max-width:440px; padding:22px; display:flex; flex-direction:column; gap:14px; }
@@ -503,7 +552,59 @@
   .stat-value{ font-size:1rem; font-weight:700; text-shadow:0 2px 10px rgba(0,0,0,0.5); }
   .stat-canvas{
     width:100%; height:80px; display:block; border-radius:10px;
-    background:#FFF7DD0d; border:1px solid #91C4C333;
+    background:#FFF7DD0d; border:1px solid var(--border-soft);
+  }
+
+  /* ===== Tombol toggle kecil di topbar (Fluid / Mode Hemat) ===== */
+  .mini-toggle{
+    display:flex; align-items:center; gap:6px;
+    font-size:.75rem; color:var(--text-dim);
+    padding:8px 12px; border-radius:999px;
+    border:1px solid var(--border-soft); background:#FFF7DD0d;
+    white-space:nowrap; transition:.18s ease; flex-shrink:0;
+  }
+  .mini-toggle:hover{ background:#FFF7DD1a; color:var(--text); }
+  .mini-toggle.on{ border-color:var(--accent); color:var(--text); background:var(--accent-fade); }
+
+  /* ===== Banner peringatan sistem (persisten, bukan toast sekali lewat) ===== */
+  .sysbar-wrap{ max-width:1600px; margin:0 auto; padding:12px 20px 0; display:flex; flex-direction:column; gap:8px; }
+  .sysbar{
+    display:flex; align-items:flex-start; gap:10px;
+    padding:11px 14px; border-radius:12px; font-size:.82rem; line-height:1.45;
+    border:1px solid var(--orange); background:#f28f2920; color:var(--text);
+    animation: sysIn .22s ease;
+  }
+  .sysbar.crit{ border-color:var(--danger); background:#e08a8a24; }
+  .sysbar .sb-ico{ flex-shrink:0; font-size:1rem; line-height:1.3; }
+  .sysbar .sb-body{ flex:1; min-width:0; }
+  .sysbar .sb-title{ font-weight:700; margin-bottom:2px; }
+  .sysbar .sb-close{
+    flex-shrink:0; background:transparent; color:var(--text-dim);
+    font-size:.9rem; padding:2px 6px; border-radius:6px;
+  }
+  .sysbar .sb-close:hover{ color:var(--text); background:#FFF7DD1a; }
+  @keyframes sysIn{ from{opacity:0; transform:translateY(-6px);} to{opacity:1; transform:none;} }
+
+  /* ===== Fallback UI: video tidak tersedia ===== */
+  .np-error{
+    display:flex; flex-direction:column; gap:10px;
+    padding:14px; border-radius:12px;
+    border:1px solid var(--danger); background:#e08a8a1a;
+  }
+  .np-error .ne-head{ display:flex; align-items:center; gap:8px; font-weight:700; font-size:.92rem; }
+  .np-error .ne-reason{ font-size:.82rem; color:var(--text-dim); line-height:1.5; }
+  .np-error .ne-actions{ display:flex; gap:8px; flex-wrap:wrap; }
+  .np-error .ne-count{ font-size:.72rem; color:var(--text-dim); font-variant-numeric:tabular-nums; }
+
+  .item.unavailable{ opacity:.55; }
+  .item.unavailable .title{ text-decoration:line-through; text-decoration-color:var(--danger); }
+  .item .badge-unavail{
+    font-size:.65rem; font-weight:700; color:var(--danger);
+    display:flex; align-items:center; gap:4px;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .sysbar{ animation:none; }
   }
 
   .hidden{ display:none !important; }
@@ -520,11 +621,15 @@
     <span class="q-row"><span class="q-label">Sisa Kuota API</span><span class="q-num" id="quotaNum">—</span></span>
     <span class="quota-bar"><i id="quotaBarFill"></i></span>
   </button>
+  <button class="mini-toggle on" id="btnFluid" title="Warna UI dinamis (hue bergeser perlahan). Klik untuk mengunci warna.">🎨 <span id="fluidLabel">Fluid</span></button>
+  <button class="mini-toggle" id="btnPerf" title="Mode Hemat: mematikan semua efek blur kaca. Aktif otomatis bila FPS Operator turun.">⚡ <span id="perfLabel">Normal</span></button>
   <button class="api-status" id="apiStatusBtn" title="Klik untuk atur API Key">
     <span class="led" id="apiLed"></span>
     <span id="apiStatusText">API belum diatur</span>
   </button>
 </div>
+
+<div class="sysbar-wrap" id="sysbarWrap"></div>
 
 <div class="app">
 
@@ -542,6 +647,20 @@
           </div>
         </div>
         <div class="np-live-badge" id="npLiveBadge"><span class="dot"></span> LIVE</div>
+      </div>
+
+      <!-- Fallback UI: tampil menggantikan info normal saat video gagal diputar -->
+      <div class="np-error hidden" id="npError">
+        <div class="ne-head">🚫 <span id="neTitle">Video tidak dapat diputar</span></div>
+        <div class="ne-reason" id="neReason">—</div>
+        <div class="ne-actions">
+          <button class="ctrl-btn play-main" id="btnErrSkip">⏭ Lewati Sekarang</button>
+          <button class="ctrl-btn" id="btnErrRetry">🔄 Coba Lagi</button>
+          <button class="ctrl-btn" id="btnErrOpen">↗ Buka di YouTube</button>
+          <button class="ctrl-btn" id="btnErrRemove">🗑 Hapus dari Playlist</button>
+          <button class="ctrl-btn" id="btnErrCancel">✕ Tutup</button>
+        </div>
+        <div class="ne-count" id="neCount"></div>
       </div>
     </div>
 
@@ -753,7 +872,10 @@ const SEARCH_CACHE_TTL = 1000 * 60 * 10; // 10 minutes
 const DEBOUNCE_MS = 800;
 const PLAYLIST_IMPORT_MAX_PAGES = 5; // 5 x 50 = maks 250 video per impor (5 unit kuota)
 const FALLBACK_THUMB = 'https://raw.githubusercontent.com/LOUKA51/Youtube/refs/heads/main/Thumbnail.webp';
-const PROJECTOR_BLUR = 20; // locked permanently — no operator-facing slider anymore
+// Radius blur kaca overlay teks di Proyektor. Diturunkan dari 22px ke 16px:
+// backdrop-filter di atas VIDEO harus resampling frame video setiap kali
+// overlay tampil, dan biayanya naik ~linear terhadap radius.
+const PROJECTOR_GLASS_BLUR = 16;
 
 /* ---------------------------- Storage helpers ---------------------------- */
 const Store = {
@@ -764,18 +886,72 @@ const Store = {
     } catch { return fallback; }
   },
   set(key, value) {
-    try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) { console.error('Storage full or blocked', e); }
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+      return true;
+    } catch (e) {
+      console.error('Storage full or blocked', e);
+      // Diam-diam gagal menyimpan = playlist hilang saat reload tanpa peringatan.
+      if (typeof warnBanner === 'function') {
+        warnBanner('storage', 'Penyimpanan lokal gagal',
+          'Perubahan playlist tidak dapat disimpan (LocalStorage penuh atau diblokir browser). '
+          + 'Data akan hilang saat halaman dimuat ulang. Coba hapus playlist lama atau matikan mode penyamaran.', true);
+      }
+      return false;
+    }
   }
 };
 
 /* ------------------------------- Toasts ---------------------------------- */
-function toast(msg, isErr = false) {
+const TOAST_MAX = 4;
+const toastSeen = new Map(); // pesan -> timestamp terakhir, untuk dedupe
+function toast(msg, isErr = false, ttl = 3200) {
   const wrap = document.getElementById('toastWrap');
+  if (!wrap) return;
+  const now = Date.now();
+  // Dedupe: pesan identik dalam 2.5 detik terakhir tidak diulang (mencegah
+  // banjir toast saat error beruntun / tombol ditekan berkali-kali).
+  const last = toastSeen.get(msg);
+  if (last && now - last < 2500) return;
+  toastSeen.set(msg, now);
+  if (toastSeen.size > 40) toastSeen.clear();
+  // Batasi antrean supaya toast tidak menutupi layar
+  while (wrap.children.length >= TOAST_MAX) wrap.firstElementChild.remove();
   const el = document.createElement('div');
   el.className = 'toast' + (isErr ? ' err' : '');
   el.textContent = msg;
   wrap.appendChild(el);
-  setTimeout(() => el.remove(), 3200);
+  setTimeout(() => el.remove(), ttl);
+}
+
+/* ---------------- Banner peringatan persisten (di atas panel) ---------------
+   Toast hilang dalam 3 detik — tidak cocok untuk kondisi yang MASIH berlaku
+   (proyektor tertutup, offline, mode hemat aktif, storage gagal). Banner ini
+   ber-ID: satu kondisi = satu baris, bisa di-update/di-clear. */
+const activeBanners = new Set();
+function warnBanner(id, title, body, critical = false) {
+  const wrap = document.getElementById('sysbarWrap');
+  if (!wrap) return;
+  let el = document.getElementById('sysbar_' + id);
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'sysbar_' + id;
+    el.className = 'sysbar' + (critical ? ' crit' : '');
+    el.innerHTML = `<span class="sb-ico">${critical ? '⛔' : '⚠️'}</span>
+      <div class="sb-body"><div class="sb-title"></div><div class="sb-text"></div></div>
+      <button class="sb-close" title="Tutup peringatan">✕</button>`;
+    el.querySelector('.sb-close').addEventListener('click', () => clearBanner(id));
+    wrap.appendChild(el);
+    activeBanners.add(id);
+  }
+  el.className = 'sysbar' + (critical ? ' crit' : '');
+  el.querySelector('.sb-title').textContent = title;
+  el.querySelector('.sb-text').textContent = body;
+}
+function clearBanner(id) {
+  const el = document.getElementById('sysbar_' + id);
+  if (el) el.remove();
+  activeBanners.delete(id);
 }
 
 /* ------------------------------ App State --------------------------------- */
@@ -1032,13 +1208,15 @@ function videoItemHTML(vid, { showPlaylistActions, showSearchActions, inPlaylist
   if (!v) return '';
   const playing = vid === currentVideoId;
   const thumbSrc = v.thumb || FALLBACK_THUMB;
+  const unavail = !!v.unavailable;
   return `
-    <div class="item ${playing ? 'playing' : ''}" data-vid="${vid}" data-playlist="${inPlaylistId || ''}">
+    <div class="item ${playing ? 'playing' : ''} ${unavail ? 'unavailable' : ''}" data-vid="${vid}" data-playlist="${inPlaylistId || ''}">
       <img src="${thumbSrc}" alt="" loading="lazy" onerror="this.onerror=null;this.src='${FALLBACK_THUMB}';">
       <div class="info">
         <div class="title" title="${escapeHTML(v.title)}">${escapeHTML(v.title)}</div>
         <div class="sub">${escapeHTML(v.channel)}</div>
         ${playing ? `<div class="badge-playing"><span class="bar"></span><span class="bar"></span><span class="bar"></span> Sedang diputar</div>` : ''}
+        ${unavail ? `<div class="badge-unavail">🚫 Tidak tersedia (kode ${escapeHTML(String(v.unavailable))})</div>` : ''}
       </div>
       <div class="item-actions">
         ${showSearchActions ? `<button class="add-btn" title="Tambah ke playlist" data-action="add" data-vid="${vid}">＋</button>` : ''}
@@ -1104,7 +1282,7 @@ function handleListClick(e) {
   const item = e.target.closest('.item');
   if (item) {
     const vid = item.dataset.vid;
-    playVideo(vid);
+    playVideo(vid, true); // klik manual = izin mencoba ulang video bertanda rusak
   }
 }
 
@@ -1543,14 +1721,12 @@ function buildProjectorHTML(initState) {
 <meta charset="UTF-8">
 <title>Yume Player — Layar Proyektor</title>
 <style>
-  :root{ --blur-amt: ${initState.blur}px; }
+  /* --glass-blur dipakai HANYA oleh overlay teks. Wallpaper blur full-screen
+     yang dulu ada di body::before DIHAPUS: #stage menutupinya 100% (opaque),
+     jadi itu murni biaya raster GPU tanpa efek visual apa pun. */
+  :root{ --glass-blur: ${initState.glassBlur}px; }
   *{margin:0;padding:0;box-sizing:border-box;}
-  html,body{height:100%;background:#000;overflow:hidden;}
-  body::before{
-    content:'';position:fixed;inset:-60px;z-index:-2;
-    background:linear-gradient(180deg,#0b0d12d9,#0b0d12ee), url('https://raw.githubusercontent.com/LOUKA51/Youtube/refs/heads/main/1366762.webp') center/cover no-repeat;
-    filter:blur(var(--blur-amt));
-  }
+  html,body{height:100%;background:#05070b;overflow:hidden;}
   #stage{position:fixed;inset:0; background:#000; overflow:hidden;}
   #ytplayer{width:100%;height:100%;}
   .empty-hint{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;color:#FFF7DDb3;font-family:'Segoe UI',sans-serif;}
@@ -1564,36 +1740,69 @@ function buildProjectorHTML(initState) {
     background:
       radial-gradient(120% 160% at 50% 0%, rgba(255,255,255,0.10), rgba(255,255,255,0) 55%),
       linear-gradient(150deg, rgba(38,34,48,0.62), rgba(16,16,22,0.6));
-    backdrop-filter: blur(22px) saturate(170%);
-    -webkit-backdrop-filter: blur(22px) saturate(170%);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
     border: 1px solid rgba(255,255,255,0.20);
     box-shadow: 0 30px 90px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.14);
     text-align:center; font-family:'Segoe UI',sans-serif;
     display:flex; align-items:center; justify-content:center;
     overflow:hidden;
     transform:translate(-50%,-46%) scale(.8);
-    filter: blur(6px);
     opacity:0;
-    will-change: transform, opacity, filter;
+    contain: paint;
   }
   .overlay-textbox.hidden{display:none;}
+  /* will-change HANYA saat animasi berlangsung — kalau dipasang permanen,
+     browser menahan layer komposit + re-blur backdrop terus-menerus. */
+  .overlay-textbox.show,
+  .overlay-textbox.hide{ will-change: transform, opacity; }
   .overlay-textbox.show{ animation: overlayIn .62s cubic-bezier(.19,1,.22,1) forwards; }
   .overlay-textbox.hide{ animation: overlayOut .4s cubic-bezier(.4,0,1,1) forwards; }
+  /* filter:blur() DIHAPUS dari keyframes: mem-blur elemen sebesar 97vw x 70vh
+     per frame memaksa re-raster penuh di atas video yang sedang berjalan —
+     penyebab utama frame drop saat pop-up teks muncul. Sekarang murni
+     transform + opacity (GPU compositing, tanpa repaint). */
   @keyframes overlayIn{
-    0%{ opacity:0; transform:translate(-50%,-46%) scale(.8); filter:blur(10px); }
-    60%{ opacity:1; filter:blur(0); }
-    100%{ opacity:1; transform:translate(-50%,-50%) scale(1); filter:blur(0); }
+    0%{ opacity:0; transform:translate(-50%,-46%) scale(.86); }
+    100%{ opacity:1; transform:translate(-50%,-50%) scale(1); }
   }
   @keyframes overlayOut{
-    0%{ opacity:1; transform:translate(-50%,-50%) scale(1); filter:blur(0); }
-    100%{ opacity:0; transform:translate(-50%,-47%) scale(.88); filter:blur(8px); }
+    0%{ opacity:1; transform:translate(-50%,-50%) scale(1); }
+    100%{ opacity:0; transform:translate(-50%,-47%) scale(.9); }
   }
+  @media (prefers-reduced-motion: reduce){
+    .overlay-textbox.show, .overlay-textbox.hide{ animation-duration:.01ms; }
+  }
+  /* Mode hemat: backdrop-filter dimatikan, diganti panel solid */
+  body.perf-lite .overlay-textbox{
+    backdrop-filter:none; -webkit-backdrop-filter:none;
+    background:rgba(18,18,24,0.88);
+  }
+
+  /* ===== Fallback UI: video tidak tersedia ===== */
+  #errScreen{
+    position:absolute; inset:0; z-index:40; display:none;
+    align-items:center; justify-content:center; flex-direction:column; gap:18px;
+    padding:6vh 8vw; text-align:center;
+    background:radial-gradient(90% 90% at 50% 40%, #1a1016 0%, #05070b 70%);
+    font-family:'Segoe UI',sans-serif; color:#FFF7DD;
+  }
+  #errScreen.visible{ display:flex; }
+  #errScreen .ico{ font-size:5rem; line-height:1; }
+  #errScreen .ttl{ font-size:2.4rem; font-weight:800; letter-spacing:.5px; }
+  #errScreen .msg{ font-size:1.3rem; color:#FFF7DDb3; max-width:22ch; line-height:1.5; }
+  #errScreen .vid{ font-size:.95rem; color:#FFF7DD66; font-family:ui-monospace,monospace; }
   #overlayTextContent{
     font-family: 'Poppins', 'Segoe UI', system-ui, sans-serif;
     font-weight:800; line-height:1.3;
     color:#FFFFFF;
-    text-shadow:0 3px 10px rgba(0,0,0,0.55);
-    filter: drop-shadow(0 4px 18px rgba(0,0,0,0.65)) drop-shadow(0 0 32px rgba(255,190,110,0.35));
+    /* Dua drop-shadow filter diganti text-shadow berlapis: hasil visual
+       nyaris identik, tapi text-shadow tidak memicu filter pass tersendiri
+       di atas layer sebesar kotak overlay saat animasi masuk/keluar. */
+    text-shadow:
+      0 3px 10px rgba(0,0,0,0.55),
+      0 4px 18px rgba(0,0,0,0.65),
+      0 0 32px rgba(255,190,110,0.35);
     word-break:break-word; letter-spacing:.5px;
     max-height:100%; overflow:hidden;
     transition: font-size .18s ease;
@@ -1607,6 +1816,12 @@ function buildProjectorHTML(initState) {
 <div id="stage">
   <div id="ytplayer"></div>
   <div class="empty-hint" id="emptyHint"><div class="big"></div></div>
+  <div id="errScreen">
+    <div class="ico">🚫</div>
+    <div class="ttl">Video Tidak Tersedia</div>
+    <div class="msg" id="errMsg">—</div>
+    <div class="vid" id="errVid"></div>
+  </div>
   <div class="overlay-textbox hidden" id="overlayTextBox">
     <div id="overlayTextContent"></div>
   </div>
@@ -1615,6 +1830,7 @@ function buildProjectorHTML(initState) {
   var initState = ${stateJSON};
   var ytPlayer = null, ytReady = false, cmdQueue = [];
   var hideTimer = null;
+  var tickTimer = null;
 
   // The box itself never changes size — only the font shrinks as text grows,
   // now scaled noticeably larger across every tier, including long text.
@@ -1667,6 +1883,25 @@ function buildProjectorHTML(initState) {
   }
   function runOrQueue(fn){ if (ytReady) fn(); else cmdQueue.push(fn); }
 
+  // ------------------------ Fallback UI: video error ------------------------
+  var ERR_TEXT = {
+    2:   'ID video tidak valid atau salah ketik.',
+    5:   'Pemutar HTML5 gagal memuat video ini.',
+    100: 'Video sudah dihapus atau disetel privat oleh pemiliknya.',
+    101: 'Pemilik video melarang pemutaran di luar YouTube (embed dinonaktifkan).',
+    150: 'Pemilik video melarang pemutaran di luar YouTube (embed dinonaktifkan).'
+  };
+  function showErrorScreen(code, vid){
+    var el = document.getElementById('errScreen');
+    document.getElementById('errMsg').textContent = ERR_TEXT[code] || ('Kesalahan pemutar (kode ' + code + ').');
+    document.getElementById('errVid').textContent = vid ? ('ID: ' + vid + ' · kode ' + code) : ('kode ' + code);
+    el.classList.add('visible');
+    hideText();
+  }
+  function clearErrorScreen(){
+    document.getElementById('errScreen').classList.remove('visible');
+  }
+
   // Fixes the black "notch"/curve some viewers saw behind the glass overlay:
   // the YouTube embed letterboxes with solid black bars whenever the video's
   // 16:9 ratio doesn't exactly match the window ratio, and the overlay's
@@ -1692,10 +1927,16 @@ function buildProjectorHTML(initState) {
   window.YumeProjector = {
     loadVideo: function(vid, time){
       runOrQueue(function(){
+        clearErrorScreen();
         document.getElementById('emptyHint').classList.add('hidden');
         ytPlayer.loadVideoById({ videoId: vid, startSeconds: time || 0 });
       });
     },
+    // Dipanggil Operator saat Mode Hemat diaktifkan/dimatikan
+    setPerfLite: function(on){
+      document.body.classList.toggle('perf-lite', !!on);
+    },
+    clearError: clearErrorScreen,
     play: function(){ runOrQueue(function(){ ytPlayer.playVideo(); }); },
     pause: function(){ runOrQueue(function(){ ytPlayer.pauseVideo(); }); },
     setVolume: function(v){ runOrQueue(function(){ ytPlayer.setVolume(v); }); },
@@ -1737,6 +1978,7 @@ function buildProjectorHTML(initState) {
   (function () {
     var frames = 0, last = performance.now();
     function loop(now) {
+      if (document.hidden) { last = now; frames = 0; requestAnimationFrame(loop); return; }
       frames++;
       if (now - last >= 1000) {
         var fps = Math.round((frames * 1000) / (now - last));
@@ -1763,6 +2005,7 @@ function buildProjectorHTML(initState) {
       events: {
         onReady: function () {
           ytReady = true;
+          if (initState.perfLite) document.body.classList.add('perf-lite');
           ytPlayer.setVolume(initState.volume != null ? initState.volume : 80);
           if (initState.captions) {
             ytPlayer.loadModule('captions');
@@ -1778,7 +2021,8 @@ function buildProjectorHTML(initState) {
           cmdQueue = [];
           // Laporkan posisi & durasi ke Operator setiap 250ms untuk update seekbar.
           // Hanya saat video playing (state 1) agar hemat CPU saat pause/idle.
-          setInterval(function () {
+          if (tickTimer) clearInterval(tickTimer);
+          tickTimer = setInterval(function () {
             try {
               if (!ytPlayer || !ytReady) return;
               var state = ytPlayer.getPlayerState();
@@ -1792,6 +2036,7 @@ function buildProjectorHTML(initState) {
           }, 250);
         },
         onStateChange: function (e) {
+          if (e.data === YT.PlayerState.PLAYING) clearErrorScreen();
           if (e.data === YT.PlayerState.ENDED) {
             try {
               if (window.opener && window.opener.YumeOperatorCallback) {
@@ -1811,6 +2056,19 @@ function buildProjectorHTML(initState) {
             if (window.opener && window.opener.YumeOperatorCallback && ytPlayer.getAvailableQualityLevels) {
               var levels = ytPlayer.getAvailableQualityLevels();
               if (levels && levels.length) window.opener.YumeOperatorCallback.onQualityLevels(levels);
+            }
+          } catch (err) {}
+        },
+        onError: function (e) {
+          // Video privat/dihapus/embed dilarang/ID salah. Tampilkan layar
+          // pengganti di Proyektor DAN laporkan ke Operator supaya bisa
+          // memberi notifikasi + auto-skip.
+          var vid = '';
+          try { vid = (ytPlayer.getVideoData && ytPlayer.getVideoData().video_id) || ''; } catch (err) {}
+          showErrorScreen(e.data, vid);
+          try {
+            if (window.opener && window.opener.YumeOperatorCallback) {
+              window.opener.YumeOperatorCallback.onError(e.data, vid);
             }
           } catch (err) {}
         },
@@ -1866,7 +2124,8 @@ function openProjector() {
     time: playerState.time || 0,
     volume: playerState.volume != null ? playerState.volume : 80,
     captions: !!ccEnabled,
-    blur: PROJECTOR_BLUR
+    glassBlur: PROJECTOR_GLASS_BLUR,
+    perfLite: document.body.classList.contains('perf-lite')
   };
   projectorWin = window.open('', 'yume_projector', 'width=1280,height=720,menubar=no,toolbar=no,location=no');
   if (!projectorWin) {
@@ -1912,11 +2171,24 @@ function ensureProjectorReady() {
   }
 }
 
+// Aksi yang percuma dikirim saat Proyektor tertutup; Operator perlu memberi
+// tahu, bukan gagal diam-diam (sumber utama kebingungan "kenapa tidak jalan").
+const PROJECTOR_REQUIRED_ACTIONS = ['play', 'pause', 'text', 'hideText', 'seek', 'loadVideo'];
 function sendToProjector(action, payload) {
-  if (!projectorWin || projectorWin.closed) return false;
+  if (!projectorWin || projectorWin.closed) {
+    if (PROJECTOR_REQUIRED_ACTIONS.includes(action)) {
+      toast('Layar Proyektor belum terbuka — perintah tidak terkirim', true);
+    }
+    return false;
+  }
   try {
     const api = projectorWin.YumeProjector;
-    if (!api) return false;
+    if (!api) {
+      // Window terbuka tapi skrip belum selesai dimuat (document.write async).
+      toast('Layar Proyektor masih dimuat, coba lagi sebentar lagi', true);
+      return false;
+    }
+    if (action === 'setPerfLite') { api.setPerfLite && api.setPerfLite(payload.on); return true; }
     if (action === 'loadVideo') api.loadVideo(payload.vid, payload.time);
     else if (action === 'play') api.play();
     else if (action === 'pause') api.pause();
@@ -1952,7 +2224,20 @@ window.YumeOperatorCallback = {
     const badge = document.getElementById('npLiveBadge');
     if (state === 1) badge.classList.add('visible');    // playing
     else if (state === 2 || state === 0) badge.classList.remove('visible'); // paused/ended
-  }
+    // BUG FIX: dulu `isPlaying` hanya diubah oleh tombol Operator, sehingga
+    // menekan P di jendela Proyektor membuat label tombol Play/Pause salah.
+    if (state === 1) {
+      isPlaying = true;
+      consecutiveLoadErrors = 0;   // pemutaran berhasil -> reset rantai error
+      cancelLoadWatchdog();
+      hideVideoErrorUI();
+    } else if (state === 2) {
+      isPlaying = false;
+    }
+    updatePlayPauseBtn();
+  },
+  // Proyektor melaporkan error pemutaran (privat, dihapus, embed dilarang, dll)
+  onError: function (code, vid) { handleVideoUnavailable(code, vid); }
 };
 
 /* =========================================================================
@@ -1987,8 +2272,35 @@ function updateTimelineTimeLabel(cur, dur) {
     `<span class="cur">${formatTime(cur)}</span> / ${formatTime(dur)}`;
 }
 
+/* --------------------- Watchdog pemuatan video -----------------------------
+   Tidak semua kegagalan memicu onError. Video geo-blocked atau jaringan mati
+   bisa "menggantung": tidak ada error, tidak ada tick. Watchdog memberi
+   peringatan setelah LOAD_TIMEOUT_MS tanpa tanda kehidupan. */
+const LOAD_TIMEOUT_MS = 14000;
+let loadWatchdog = null;
+let watchdogVid = null;
+function armLoadWatchdog(vid) {
+  cancelLoadWatchdog();
+  watchdogVid = vid;
+  loadWatchdog = setTimeout(() => {
+    loadWatchdog = null;
+    if (!projectorWin || projectorWin.closed) return;
+    const v = videos[watchdogVid];
+    warnBanner('stall', 'Video tidak merespons',
+      `"${v ? v.title : watchdogVid}" belum mulai diputar setelah ${Math.round(LOAD_TIMEOUT_MS / 1000)} detik. `
+      + 'Kemungkinan jaringan lambat, video dibatasi wilayah, atau Proyektor kehilangan koneksi. '
+      + 'Coba Lewati (⏭) atau muat ulang video.');
+    toast('Video belum mulai diputar — cek jaringan atau lewati video', true);
+  }, LOAD_TIMEOUT_MS);
+}
+function cancelLoadWatchdog() {
+  if (loadWatchdog) { clearTimeout(loadWatchdog); loadWatchdog = null; }
+  clearBanner('stall');
+}
+
 /* Dipanggil dari YumeOperatorCallback.onTick (laporan dari Proyektor) */
 function applyTimelineTick(cur, dur) {
+  if (cur > 0 || dur > 0) cancelLoadWatchdog();
   if (isTimelineDragging) return;
   lastKnownLocalTime = cur;
   if (dur > 0 && Math.abs(dur - currentDuration) > 0.5) {
@@ -2008,6 +2320,7 @@ function applyTimelineTick(cur, dur) {
 /* --- Broadcast helpers: semua playback commands hanya ke Projector --- */
 function broadcastLoad(vid, startSeconds) {
   sendToProjector('loadVideo', { vid, time: startSeconds || 0 });
+  armLoadWatchdog(vid);
   // Reset timeline UI segera; nilai baru menyusul via onTick dari Proyektor
   currentDuration = 0;
   lastKnownLocalTime = startSeconds || 0;
@@ -2050,9 +2363,12 @@ function broadcastSeek(seconds) { sendToProjector('seek', { seconds }); }
   inp.addEventListener('pointerdown', beginDrag);
   window.addEventListener('pointerup', endDrag);
   window.addEventListener('pointercancel', endDrag);
-  // Keyboard (arrow) juga trigger 'change' setelah 'input', tangani sekaligus
-  inp.addEventListener('keydown', beginDrag);
-  inp.addEventListener('keyup', endDrag);
+  // Keyboard (arrow/Home/End/PageUp/PageDown) juga trigger 'change' setelah
+  // 'input'. BUG FIX: dulu SEMUA tombol (termasuk Tab saat berpindah fokus)
+  // memicu beginDrag/endDrag -> seek liar ke posisi thumb saat itu.
+  const SEEK_KEYS = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown'];
+  inp.addEventListener('keydown', (e) => { if (SEEK_KEYS.includes(e.key)) beginDrag(); });
+  inp.addEventListener('keyup', (e) => { if (SEEK_KEYS.includes(e.key)) endDrag(); });
 
   // Live preview saat drag: update label & progress bar tanpa seek player
   inp.addEventListener('input', () => {
@@ -2185,8 +2501,15 @@ function loadVideoIntoPlayer(vid, startSeconds = 0, autoplay = true) {
   renderSearchList();
 }
 
-function playVideo(vid) {
-  if (!videos[vid]) return;
+function playVideo(vid, forceRetry = false) {
+  if (!videos[vid]) { toast('Data video tidak ditemukan', true); return; }
+  // Operator memilih video yang pernah gagal secara sadar -> beri kesempatan
+  // sekali lagi (status bisa berubah: video di-unprivate, embed dibuka, dsb).
+  if (videos[vid].unavailable && forceRetry) {
+    delete videos[vid].unavailable;
+    Store.set(STORAGE_KEYS.VIDEOS, videos);
+  }
+  hideVideoErrorUI();
   loadVideoIntoPlayer(vid, 0, true);
 }
 
@@ -2213,25 +2536,54 @@ function getActiveQueue() {
   const pl = playlists[activePlaylistId];
   return pl ? pl.videoIds.slice() : [];
 }
+function isPlayable(vid) { return !!videos[vid] && !videos[vid].unavailable; }
+
+/* Cari kandidat berikutnya yang MASIH bisa diputar, maksimal satu putaran
+   penuh. Mengembalikan null bila seluruh antrean bermasalah — mencegah
+   rekursi tanpa henti playNext -> error -> playNext. */
+function findPlayable(queue, startIdx, step) {
+  for (let i = 1; i <= queue.length; i++) {
+    const idx = ((startIdx + step * i) % queue.length + queue.length) % queue.length;
+    if (isPlayable(queue[idx])) return queue[idx];
+  }
+  return null;
+}
 
 function playNext() {
   const queue = getActiveQueue();
-  if (queue.length === 0) return;
-  let idx = queue.indexOf(currentVideoId);
-  let nextIdx;
-  if (playerState.shuffle) {
-    nextIdx = Math.floor(Math.random() * queue.length);
-  } else {
-    nextIdx = (idx + 1) % queue.length;
+  if (queue.length === 0) {
+    toast('Playlist aktif masih kosong', true);
+    isPlaying = false; updatePlayPauseBtn();
+    return;
   }
-  playVideo(queue[nextIdx]);
+  const idx = queue.indexOf(currentVideoId);
+  let target = null;
+  if (playerState.shuffle) {
+    // BUG FIX: dulu acak murni bisa memilih video yang SEDANG diputar,
+    // membuat lagu yang sama terulang di tengah playlist.
+    const pool = queue.filter(v => v !== currentVideoId && isPlayable(v));
+    if (pool.length) target = pool[Math.floor(Math.random() * pool.length)];
+    else if (isPlayable(currentVideoId)) target = currentVideoId;
+  } else {
+    target = findPlayable(queue, idx < 0 ? -1 : idx, 1);
+  }
+  if (!target) {
+    isPlaying = false; updatePlayPauseBtn();
+    warnBanner('allbad', 'Tidak ada video yang bisa diputar',
+      'Seluruh video di playlist aktif ditandai tidak tersedia. Hapus video bermasalah, '
+      + 'atau tekan "Coba Lagi" pada video untuk membuang tanda tersebut.', true);
+    return;
+  }
+  clearBanner('allbad');
+  playVideo(target);
 }
 function playPrev() {
   const queue = getActiveQueue();
-  if (queue.length === 0) return;
-  let idx = queue.indexOf(currentVideoId);
-  let prevIdx = idx <= 0 ? queue.length - 1 : idx - 1;
-  playVideo(queue[prevIdx]);
+  if (queue.length === 0) { toast('Playlist aktif masih kosong', true); return; }
+  const idx = queue.indexOf(currentVideoId);
+  const target = findPlayable(queue, idx < 0 ? queue.length : idx, -1);
+  if (!target) { toast('Tidak ada video sebelumnya yang bisa diputar', true); return; }
+  playVideo(target);
 }
 
 document.getElementById('btnNext').addEventListener('click', playNext);
@@ -2255,6 +2607,7 @@ document.getElementById('volumeSlider').addEventListener('input', (e) => {
 });
 
 function handleVideoEnded() {
+  cancelLoadWatchdog();
   if (playerState.loop) {
     ensureProjectorReady();
     broadcastLoad(currentVideoId, 0);
@@ -2505,6 +2858,317 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
+
+/* =========================================================================
+   FLUID COLOR ENGINE — warna UI dinamis
+   -------------------------------------------------------------------------
+   Seluruh aksen (border, tombol, progress, glow) diturunkan dari satu
+   variabel `--ui-hue`. Hue digeser perlahan lewat JS, BUKAN animasi CSS
+   pada :root, karena animasi CSS pada custom property akan memicu repaint
+   setiap frame (60fps) untuk SETIAP elemen yang memakainya. Di sini update
+   dibatasi ~8x/detik: pada siklus 90 detik pergeserannya hanya ~0.5 derajat
+   per langkah — mata tidak bisa melihat tangganya, tapi biaya paint turun
+   ~7x dibanding animasi CSS.
+   ========================================================================= */
+const FluidColor = {
+  hue: 205,
+  base: 205,
+  span: 150,            // rentang geser: 205 -> 355 -> kembali
+  periodMs: 90000,      // satu siklus penuh 90 detik
+  stepMs: 125,          // ~8 update/detik
+  timer: null,
+  enabled: true,
+  t0: performance.now(),
+
+  apply() {
+    document.documentElement.style.setProperty('--ui-hue', this.hue.toFixed(1));
+  },
+  tick() {
+    if (document.hidden) return;                 // tab tidak terlihat: jangan repaint
+    if (document.body.classList.contains('perf-lite')) return; // mode hemat: warna beku
+    const elapsed = (performance.now() - this.t0) % this.periodMs;
+    const phase = elapsed / this.periodMs;
+    // Segitiga halus (ease-in-out) agar pembalikan arah tidak terasa patah
+    const tri = phase < 0.5 ? phase * 2 : (1 - phase) * 2;
+    const eased = tri * tri * (3 - 2 * tri);
+    this.hue = this.base + eased * this.span;
+    this.apply();
+  },
+  start() {
+    if (this.timer) return;
+    this.timer = setInterval(() => this.tick(), this.stepMs);
+  },
+  stop() {
+    if (this.timer) { clearInterval(this.timer); this.timer = null; }
+  },
+  setEnabled(on) {
+    this.enabled = on;
+    const btn = document.getElementById('btnFluid');
+    const lbl = document.getElementById('fluidLabel');
+    btn.classList.toggle('on', on);
+    lbl.textContent = on ? 'Fluid' : 'Warna Kunci';
+    if (on) { this.t0 = performance.now() - 0; this.start(); }
+    else { this.stop(); this.hue = this.base; this.apply(); }
+    toast(on ? 'Warna UI dinamis diaktifkan' : 'Warna UI dikunci pada preset dasar');
+  }
+};
+document.getElementById('btnFluid').addEventListener('click', () => {
+  FluidColor.setEnabled(!FluidColor.enabled);
+});
+// Hormati preferensi aksesibilitas: pengguna yang meminta minim animasi
+// mendapat warna statis sejak awal.
+if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  FluidColor.enabled = false;
+}
+
+/* =========================================================================
+   PERF GUARD — deteksi frame drop di jendela Operator
+   -------------------------------------------------------------------------
+   Panel kaca memakai backdrop-filter; di GPU lemah (atau saat Proyektor
+   memutar video 4K di layar kedua) biayanya terasa. Guard ini mengukur FPS
+   Operator sendiri dan menyalakan Mode Hemat otomatis bila melorot.
+   ========================================================================= */
+const PerfGuard = {
+  frames: 0,
+  last: performance.now(),
+  lowStreak: 0,
+  manualOverride: false,   // sekali operator menekan tombol, otomatisasi mundur
+  active: false,
+
+  loop(now) {
+    if (document.hidden) { PerfGuard.last = now; PerfGuard.frames = 0; }
+    else {
+      PerfGuard.frames++;
+      if (now - PerfGuard.last >= 1000) {
+        const fps = Math.round((PerfGuard.frames * 1000) / (now - PerfGuard.last));
+        PerfGuard.frames = 0;
+        PerfGuard.last = now;
+        PerfGuard.evaluate(fps);
+      }
+    }
+    requestAnimationFrame(PerfGuard.loop);
+  },
+  evaluate(fps) {
+    if (PerfGuard.manualOverride) return;
+    if (fps < 30) {
+      PerfGuard.lowStreak++;
+      // 3 detik berturut-turut di bawah 30fps baru bertindak — hindari salah
+      // vonis akibat lonjakan sesaat (mis. saat render daftar hasil pencarian).
+      if (PerfGuard.lowStreak >= 3 && !PerfGuard.active) {
+        PerfGuard.set(true, true);
+      }
+    } else {
+      PerfGuard.lowStreak = 0;
+    }
+  },
+  set(on, automatic = false) {
+    PerfGuard.active = on;
+    document.body.classList.toggle('perf-lite', on);
+    const btn = document.getElementById('btnPerf');
+    const lbl = document.getElementById('perfLabel');
+    btn.classList.toggle('on', on);
+    lbl.textContent = on ? 'Mode Hemat' : 'Normal';
+    sendToProjector('setPerfLite', { on });
+    if (on) {
+      warnBanner('perf', 'Mode Hemat aktif',
+        (automatic
+          ? 'FPS Operator terdeteksi di bawah 30 selama 3 detik. '
+          : '')
+        + 'Semua efek blur kaca dimatikan agar pemutaran video di Proyektor tetap lancar. '
+        + 'Klik tombol ⚡ di kanan atas untuk kembali ke tampilan penuh.');
+      if (!automatic) toast('Mode Hemat diaktifkan — efek blur dimatikan');
+    } else {
+      clearBanner('perf');
+      FluidColor.enabled && FluidColor.start();
+      if (!automatic) toast('Mode Hemat dimatikan — efek blur kembali aktif');
+    }
+  }
+};
+document.getElementById('btnPerf').addEventListener('click', () => {
+  PerfGuard.manualOverride = true;
+  PerfGuard.lowStreak = 0;
+  PerfGuard.set(!PerfGuard.active, false);
+});
+
+/* =========================================================================
+   VIDEO TIDAK TERSEDIA — pencegahan, notifikasi, dan UI pengganti
+   ------------------------------------------------------------------------- */
+const UNAVAILABLE_REASON = {
+  2:   'ID video tidak valid — kemungkinan link salah ketik atau sudah berubah.',
+  5:   'Pemutar HTML5 gagal memuat video ini. Coba muat ulang Layar Proyektor.',
+  100: 'Video sudah dihapus, atau disetel privat oleh pemiliknya.',
+  101: 'Pemilik video melarang pemutaran di luar YouTube (embed dinonaktifkan).',
+  150: 'Pemilik video melarang pemutaran di luar YouTube (embed dinonaktifkan).'
+};
+const AUTO_SKIP_MS = 6000;
+const MAX_CONSECUTIVE_ERRORS = 4;   // batas rantai error sebelum berhenti
+let consecutiveLoadErrors = 0;
+let autoSkipTimer = null;
+let autoSkipCountdown = null;
+let errorVideoId = null;
+
+function hideVideoErrorUI() {
+  clearTimeout(autoSkipTimer); autoSkipTimer = null;
+  clearInterval(autoSkipCountdown); autoSkipCountdown = null;
+  const box = document.getElementById('npError');
+  if (box) box.classList.add('hidden');
+  errorVideoId = null;
+}
+
+function handleVideoUnavailable(code, vid) {
+  cancelLoadWatchdog();
+  const targetId = (vid && videos[vid]) ? vid : currentVideoId;
+  errorVideoId = targetId;
+  isPlaying = false;
+  updatePlayPauseBtn();
+
+  // Tandai permanen agar tidak dicoba lagi otomatis pada putaran berikutnya.
+  if (targetId && videos[targetId]) {
+    videos[targetId].unavailable = code;
+    Store.set(STORAGE_KEYS.VIDEOS, videos);
+    renderPlaylistList();
+    renderSearchList();
+  }
+
+  const title = (targetId && videos[targetId]) ? videos[targetId].title : (targetId || 'Video');
+  const reason = UNAVAILABLE_REASON[code] || `Pemutar YouTube mengembalikan kode kesalahan ${code}.`;
+
+  document.getElementById('nowInfo').classList.add('hidden');
+  document.getElementById('nowEmpty').classList.add('hidden');
+  const box = document.getElementById('npError');
+  document.getElementById('neTitle').textContent = title;
+  document.getElementById('neReason').textContent = reason;
+  box.classList.remove('hidden');
+
+  toast('Video tidak dapat diputar: ' + reason, true, 5000);
+
+  consecutiveLoadErrors++;
+  const countEl = document.getElementById('neCount');
+
+  // Guard rantai error: kalau beberapa video gagal beruntun, kemungkinan
+  // masalahnya sistemik (jaringan mati / API key salah / seluruh playlist
+  // berisi video privat). Berhenti auto-skip supaya tidak membakar playlist.
+  if (consecutiveLoadErrors >= MAX_CONSECUTIVE_ERRORS) {
+    countEl.textContent = `Auto-lewati dihentikan: ${consecutiveLoadErrors} video gagal berturut-turut.`;
+    warnBanner('chain', 'Beberapa video gagal berturut-turut',
+      `${consecutiveLoadErrors} video gagal diputar berurutan. Auto-lewati dihentikan agar tidak menghabiskan `
+      + 'antrean. Periksa koneksi internet, atau pastikan playlist tidak berisi video privat/terhapus.', true);
+    return;
+  }
+
+  // Auto-skip dengan hitung mundur yang terlihat — operator bisa membatalkan.
+  let left = Math.round(AUTO_SKIP_MS / 1000);
+  countEl.textContent = `Otomatis dilewati dalam ${left} detik…`;
+  autoSkipCountdown = setInterval(() => {
+    left--;
+    countEl.textContent = left > 0 ? `Otomatis dilewati dalam ${left} detik…` : 'Melewati…';
+  }, 1000);
+  autoSkipTimer = setTimeout(() => {
+    hideVideoErrorUI();
+    playNext();
+  }, AUTO_SKIP_MS);
+}
+
+document.getElementById('btnErrSkip').addEventListener('click', () => {
+  hideVideoErrorUI();
+  playNext();
+});
+document.getElementById('btnErrRetry').addEventListener('click', () => {
+  const vid = errorVideoId;
+  if (!vid) return;
+  hideVideoErrorUI();
+  consecutiveLoadErrors = 0;
+  clearBanner('chain');
+  playVideo(vid, true);
+});
+document.getElementById('btnErrOpen').addEventListener('click', () => {
+  if (!errorVideoId) return;
+  window.open('https://www.youtube.com/watch?v=' + encodeURIComponent(errorVideoId), '_blank', 'noopener');
+});
+document.getElementById('btnErrRemove').addEventListener('click', () => {
+  const vid = errorVideoId;
+  if (!vid) return;
+  removeFromPlaylist(activePlaylistId, vid);
+  hideVideoErrorUI();
+  playNext();
+});
+document.getElementById('btnErrCancel').addEventListener('click', () => {
+  hideVideoErrorUI();
+  if (currentVideoId && videos[currentVideoId]) {
+    document.getElementById('nowInfo').classList.remove('hidden');
+  } else {
+    document.getElementById('nowEmpty').classList.remove('hidden');
+  }
+});
+
+/* --------------- Pencegahan awal: cek sebelum memutar --------------------- */
+// Dipasang sebagai pembungkus loadVideoIntoPlayer supaya semua jalur masuk
+// (klik, hotkey, autoplay berikutnya) melewati validasi yang sama.
+const _loadVideoIntoPlayer = loadVideoIntoPlayer;
+loadVideoIntoPlayer = function (vid, startSeconds = 0, autoplay = true) {
+  if (!YT_ID_RE.test(vid || '')) {
+    toast('ID video tidak valid — dibatalkan sebelum dikirim ke Proyektor', true);
+    return;
+  }
+  if (!navigator.onLine) {
+    warnBanner('offline', 'Tidak ada koneksi internet',
+      'Perangkat sedang offline. Pemutaran YouTube tidak akan berjalan sampai koneksi pulih.', true);
+    toast('Perangkat offline — video kemungkinan besar gagal dimuat', true);
+  }
+  return _loadVideoIntoPlayer(vid, startSeconds, autoplay);
+};
+
+/* --------------------- Pemantau koneksi & Proyektor ----------------------- */
+window.addEventListener('offline', () => {
+  warnBanner('offline', 'Tidak ada koneksi internet',
+    'Perangkat terputus dari jaringan. Pemutaran akan berhenti/buffering sampai koneksi pulih.', true);
+});
+window.addEventListener('online', () => {
+  clearBanner('offline');
+  toast('Koneksi internet pulih');
+});
+
+// Proyektor ditutup manual oleh operator saat video masih "playing":
+// beri tahu, jangan biarkan tombol Play berbohong.
+let projectorWasOpen = false;
+setInterval(() => {
+  const open = !!(projectorWin && !projectorWin.closed);
+  if (projectorWasOpen && !open) {
+    isPlaying = false;
+    updatePlayPauseBtn();
+    cancelLoadWatchdog();
+    document.getElementById('npLiveBadge').classList.remove('visible');
+    toast('Layar Proyektor tertutup — pemutaran dihentikan', true);
+  }
+  projectorWasOpen = open;
+}, 1200);
+
+/* --------------------- Pemeriksaan mandiri saat start --------------------- */
+// Deteksi dini kondisi lingkungan yang pasti bikin fitur gagal, supaya
+// operator tahu sebelum pertunjukan dimulai, bukan saat sudah di atas panggung.
+function runSelfCheck() {
+  const problems = [];
+  try {
+    localStorage.setItem('__yume_probe', '1');
+    localStorage.removeItem('__yume_probe');
+  } catch (e) {
+    problems.push('LocalStorage diblokir (mode penyamaran?) — playlist tidak akan tersimpan.');
+  }
+  if (!('backdropFilter' in document.documentElement.style) &&
+      !('webkitBackdropFilter' in document.documentElement.style)) {
+    problems.push('Browser tidak mendukung backdrop-filter — tampilan kaca memakai warna solid.');
+  }
+  if (location.protocol === 'file:') {
+    problems.push('Dibuka lewat file:// — beberapa browser membatasi popup Proyektor. Izinkan popup bila diminta.');
+  }
+  if (!navigator.onLine) {
+    problems.push('Perangkat sedang offline.');
+  }
+  if (problems.length) {
+    warnBanner('selfcheck', 'Hasil pemeriksaan sistem', problems.join(' · '));
+  }
+}
+
 /* ------------------------------ Init ----------------------------------------- */
 function init() {
   QuotaMeter.render();
@@ -2536,6 +3200,13 @@ function init() {
   if (!apiKey) {
     setTimeout(() => { settingsModal.classList.remove('hidden'); }, 400);
   }
+
+  // Warna dinamis + pengawas performa + pemeriksaan lingkungan
+  document.getElementById('btnFluid').classList.toggle('on', FluidColor.enabled);
+  document.getElementById('fluidLabel').textContent = FluidColor.enabled ? 'Fluid' : 'Warna Kunci';
+  if (FluidColor.enabled) FluidColor.start(); else FluidColor.apply();
+  requestAnimationFrame(PerfGuard.loop);
+  runSelfCheck();
 }
 init();
 </script>

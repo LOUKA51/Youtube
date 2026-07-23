@@ -344,13 +344,26 @@
   .quality-active{ font-size:.78rem; color:var(--text-dim); white-space:nowrap; }
   .net-mini{ font-size:.78rem; color:var(--text-dim); white-space:nowrap; }
 
-  .typing-row{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:14px; }
+  .typing-row{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:16px; }
   .typing-row input[type=text]{
-    flex:1; min-width:180px; padding:10px 14px;
-    background:#FFF7DD12; border:1px solid var(--border); border-radius:10px;
-    color:var(--text); font-size:.88rem; outline:none; transition:.2s ease;
+    flex:1; min-width:220px; padding:16px 18px;
+    background:#FFF7DD12; border:1px solid var(--border); border-radius:12px;
+    color:var(--text); font-size:1rem; min-height:52px; outline:none; transition:.2s ease;
+    box-sizing:border-box;
   }
   .typing-row input[type=text]:focus{ border-color:var(--accent); background:#FFF7DD1f; box-shadow:0 0 0 3px var(--accent-ring); }
+
+  /* Tombol Paste (kiri) & Bersihkan (kanan) — dipakai di Typing Box & Search Box.
+     Ukuran dibuat besar (min-height 52px, padding lega) agar mudah ditekan mouse. */
+  .btn-paste, .btn-clear{
+    display:flex; align-items:center; justify-content:center; gap:6px; flex-shrink:0;
+    padding:14px 18px; min-height:52px; border-radius:12px; box-sizing:border-box;
+    font-size:.88rem; font-weight:600; white-space:nowrap; cursor:pointer; transition:.15s ease;
+  }
+  .btn-paste{ background:#B4DEBD22; border:1px solid #B4DEBD66; color:var(--success); }
+  .btn-paste:hover{ background:#B4DEBD3d; border-color:var(--success); transform:translateY(-1px); }
+  .btn-clear{ background:#E08A8A22; border:1px solid #E08A8A66; color:var(--danger); }
+  .btn-clear:hover{ background:#E08A8A3d; border-color:var(--danger); transform:translateY(-1px); }
 
   .playlist-select{
     display:flex; align-items:center; gap:10px; flex-wrap:wrap;
@@ -368,17 +381,6 @@
     font-size:1rem; transition:.15s;
   }
   .icon-btn:hover{ background:var(--accent); color:#0b0d12; border-color:var(--accent); }
-
-  /* Tombol aksi field (Bersihkan/Tempel) — target klik 44px agar nyaman
-     ditekan mouse maupun jari, konsisten dengan warna & radius tombol lain. */
-  .field-btn{
-    flex-shrink:0; display:flex; align-items:center; justify-content:center; gap:6px;
-    min-width:44px; height:44px; padding:0 14px;
-    background:#FFF7DD12; border:1px solid var(--border-soft); color:var(--text);
-    border-radius:10px; font-size:1.05rem; transition:.15s ease;
-  }
-  .field-btn:hover{ background:var(--accent); color:#0b0d12; border-color:var(--accent); transform:translateY(-1px); }
-  .field-btn:active{ transform:translateY(0); }
 
   /* ===== PROJECTOR PANEL ===== */
   .projector-panel{ padding:16px; display:flex; flex-direction:column; gap:12px; }
@@ -413,16 +415,17 @@
   #playlistList{ max-height:72vh; }
 
   /* ===== Kontrol Filter / Sort / View Toggle (di dalam box Hasil Pencarian) ===== */
-  .search-box{ display:flex; align-items:center; gap:8px; }
-  .search-input-wrap{ position:relative; flex:1 1 auto; min-width:0; }
-  .search-input-wrap input{
-    width:100%; padding:11px 44px 11px 16px;
+  /* search-box kini flex row: [Paste] [input+icon] [Bersihkan] */
+  .search-box{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .search-input-wrap{ position:relative; flex:1 1 220px; min-width:180px; }
+  .search-box input{
+    width:100%; padding:16px 44px 16px 18px; box-sizing:border-box;
     background:#FFF7DD12; border:1px solid var(--border); border-radius:12px;
-    color:var(--text); font-size:.92rem; outline:none; transition:all .2s ease;
+    color:var(--text); font-size:1rem; min-height:52px; outline:none; transition:all .2s ease;
   }
-  .search-input-wrap input::placeholder{ color:var(--text-dim); }
-  .search-input-wrap input:focus{ border-color:var(--accent); background:#FFF7DD1f; box-shadow:0 0 0 3px var(--accent-ring); }
-  .search-input-wrap .icon{ position:absolute; right:14px; top:50%; transform:translateY(-50%); opacity:.7; font-size:1rem; pointer-events:none; }
+  .search-box input::placeholder{ color:var(--text-dim); }
+  .search-box input:focus{ border-color:var(--accent); background:#FFF7DD1f; box-shadow:0 0 0 3px var(--accent-ring); }
+  .search-box .icon{ position:absolute; right:14px; top:50%; transform:translateY(-50%); opacity:.7; font-size:1rem; pointer-events:none; }
 
   .search-controls{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
   .search-controls select{
@@ -709,9 +712,9 @@
     </div>
 
     <div class="glass typing-row">
+      <button type="button" class="btn-paste" id="btnPasteTyping" title="Tempel teks dari clipboard">📋 Paste</button>
       <input type="text" id="typingBox" placeholder="Ketik teks untuk Layar Proyektor... (Enter untuk kirim)" autocomplete="off">
-      <button type="button" class="field-btn" id="btnTypingClean" title="Bersihkan kolom teks" aria-label="Bersihkan kolom teks">🧹</button>
-      <button type="button" class="field-btn" id="btnTypingPaste" title="Tempel dari clipboard" aria-label="Tempel dari clipboard">📋</button>
+      <button type="button" class="btn-clear" id="btnClearTyping" title="Bersihkan teks">🧹 Bersihkan</button>
       <button class="ctrl-btn play-main" id="btnSendText">📢 Kirim</button>
       <button class="ctrl-btn" id="btnHideText" title="Sembunyikan (T)">🙈 Sembunyikan</button>
     </div>
@@ -728,12 +731,12 @@
         <span class="count" id="searchCount">0</span>
       </div>
       <div class="search-box">
+        <button type="button" class="btn-paste" id="btnPasteSearch" title="Tempel teks dari clipboard">📋 Paste</button>
         <div class="search-input-wrap">
           <input id="searchInput" type="text" placeholder="Cari musik, video musik, atau lirik..." autocomplete="off">
           <span class="icon">🔍</span>
         </div>
-        <button type="button" class="field-btn" id="btnSearchClean" title="Bersihkan kolom pencarian" aria-label="Bersihkan kolom pencarian">🧹</button>
-        <button type="button" class="field-btn" id="btnSearchPaste" title="Tempel dari clipboard" aria-label="Tempel dari clipboard">📋</button>
+        <button type="button" class="btn-clear" id="btnClearSearch" title="Bersihkan pencarian">🧹 Bersihkan</button>
       </div>
       <div class="search-controls">
         <label>Urutkan
@@ -1372,35 +1375,33 @@ document.getElementById('searchInput').addEventListener('keydown', (e) => {
   handleSearchSubmit(e.target.value.trim());
 });
 
-// Helper Clean/Paste untuk kolom teks (searchInput & typingBox).
-// Clipboard-read butuh secure context (https/localhost); saat dibuka via
-// file:// permintaan ini akan gagal — fallback: fokuskan field & minta
-// pengguna Ctrl+V manual, jangan diam saja tanpa umpan balik.
-async function pasteFromClipboard(inputEl, dispatchInputEvent) {
+// Paste: ambil teks/link dari clipboard sistem lalu langsung trigger event
+// 'input' yang sudah ada di atas (debounce + pencarian jalan otomatis).
+document.getElementById('btnPasteSearch').addEventListener('click', async () => {
+  const searchInput = document.getElementById('searchInput');
   try {
-    if (!navigator.clipboard || !navigator.clipboard.readText) throw new Error('unsupported');
     const text = await navigator.clipboard.readText();
     if (!text) { toast('Clipboard kosong', true); return; }
-    inputEl.value = text;
-    inputEl.focus();
-    if (dispatchInputEvent) inputEl.dispatchEvent(new Event('input', { bubbles: true }));
-    toast('Teks ditempel dari clipboard');
-  } catch (err) {
-    inputEl.focus();
-    toast('Browser memblokir tempel otomatis — klik kolom lalu tekan Ctrl+V', true);
+    searchInput.value = text;
+    searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+    searchInput.focus();
+    toast('Teks ditempel ke kotak pencarian');
+  } catch {
+    toast('Tidak bisa akses clipboard otomatis. Gunakan Ctrl+V di kotak pencarian.', true);
+    searchInput.focus();
   }
-}
-
-document.getElementById('btnSearchClean').addEventListener('click', () => {
-  const input = document.getElementById('searchInput');
-  input.value = '';
-  input.focus();
-  // Pancing ulang listener 'input' yang sudah ada supaya hasil pencarian
-  // & searchState ikut ter-reset persis seperti saat dihapus manual.
-  input.dispatchEvent(new Event('input', { bubbles: true }));
 });
-document.getElementById('btnSearchPaste').addEventListener('click', () => {
-  pasteFromClipboard(document.getElementById('searchInput'), true);
+
+// Bersihkan: kosongkan input lalu dispatch 'input' supaya listener yang sudah
+// ada (baris di atas) mereset searchResults & tampilan list secara konsisten
+// dengan perilaku saat pengguna menghapus teks secara manual.
+document.getElementById('btnClearSearch').addEventListener('click', () => {
+  const searchInput = document.getElementById('searchInput');
+  clearTimeout(debounceTimer);
+  searchInput.value = '';
+  searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+  searchInput.focus();
+  toast('Pencarian dibersihkan');
 });
 
 // Mengubah status toggle saat link playlist sudah ada di kolom = jalankan ulang.
@@ -2683,12 +2684,27 @@ typingBox.addEventListener('keydown', (e) => {
 document.getElementById('btnHideText').addEventListener('click', () => {
   sendToProjector('hideText');
 });
-document.getElementById('btnTypingClean').addEventListener('click', () => {
+
+/* Paste: ambil teks dari clipboard sistem dan sisipkan ke Typing Box.
+   navigator.clipboard butuh konteks aman (https/localhost); jika ditolak
+   (mis. dibuka lewat file:// tanpa izin), beri tahu pengguna agar
+   memakai Ctrl+V manual — input tetap bisa menerima paste biasa. */
+document.getElementById('btnPasteTyping').addEventListener('click', async () => {
+  try {
+    const text = await navigator.clipboard.readText();
+    if (!text) { toast('Clipboard kosong', true); return; }
+    typingBox.value = text;
+    typingBox.focus();
+    toast('Teks ditempel ke Typing Box');
+  } catch {
+    toast('Tidak bisa akses clipboard otomatis. Gunakan Ctrl+V di kotak teks.', true);
+    typingBox.focus();
+  }
+});
+document.getElementById('btnClearTyping').addEventListener('click', () => {
   typingBox.value = '';
   typingBox.focus();
-});
-document.getElementById('btnTypingPaste').addEventListener('click', () => {
-  pasteFromClipboard(typingBox, false);
+  toast('Typing Box dibersihkan');
 });
 
 /* ------------------- Kondisi Sistem: FPS & Jaringan (grafik) ---------------- */
